@@ -55,7 +55,10 @@ public class AddressBarTests : IDisposable
             Mock.Of<IStatePersistenceService>(),
             Mock.Of<IFolderColorService>(),
             Mock.Of<IFileOperationManager>(),
-            Mock.Of<IEditorService>());
+            Mock.Of<IEditorService>(),
+            Mock.Of<ITerminalDiscoveryService>(),
+            Mock.Of<ITerminalLauncher>(),
+            Mock.Of<IGlobalHotkeyService>());
     }
 
     public void Dispose()

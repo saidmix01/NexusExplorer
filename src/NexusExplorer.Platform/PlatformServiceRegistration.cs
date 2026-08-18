@@ -19,6 +19,8 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<IPlatformService, WindowsPlatformService>();
                 services.AddSingleton<ITerminalService, WindowsTerminalService>();
                 services.AddSingleton<ITerminalSessionService, WindowsTerminalSessionService>();
+                services.AddSingleton<ITerminalDiscoveryService, WindowsTerminalDiscoveryService>();
+                services.AddSingleton<IGlobalHotkeyService, WindowsGlobalHotkeyService>();
                 services.AddSingleton<IRecycleBinService, WindowsRecycleBinService>();
                 services.AddSingleton<ISendToService, WindowsSendToService>();
                 break;
@@ -26,6 +28,8 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<IPlatformService, LinuxPlatformService>();
                 services.AddSingleton<ITerminalService, LinuxTerminalService>();
                 services.AddSingleton<ITerminalSessionService, LinuxTerminalSessionService>();
+                services.AddSingleton<ITerminalDiscoveryService, LinuxTerminalDiscoveryService>();
+                services.AddSingleton<IGlobalHotkeyService, LinuxGlobalHotkeyService>();
                 services.AddSingleton<IRecycleBinService, LinuxRecycleBinService>();
                 services.AddSingleton<ISendToService, DefaultSendToService>();
                 break;
@@ -33,6 +37,8 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<IPlatformService, MacOSPlatformService>();
                 services.AddSingleton<ITerminalService, MacOSTerminalService>();
                 services.AddSingleton<ITerminalSessionService, MacOSTerminalSessionService>();
+                services.AddSingleton<ITerminalDiscoveryService, MacOSTerminalDiscoveryService>();
+                services.AddSingleton<IGlobalHotkeyService, MacOSGlobalHotkeyService>();
                 services.AddSingleton<IRecycleBinService, MacOSRecycleBinService>();
                 services.AddSingleton<ISendToService, DefaultSendToService>();
                 break;

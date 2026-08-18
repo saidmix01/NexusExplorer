@@ -6,11 +6,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NexusExplorer.App.Services;
 using NexusExplorer.App.ViewModels;
 using NexusExplorer.App.Views;
+using NexusExplorer.Core.Abstractions;
 using NexusExplorer.Core.Models;
 using NexusExplorer.Infrastructure.DependencyInjection;
 using NexusExplorer.Infrastructure.Logging;
@@ -20,6 +22,9 @@ namespace NexusExplorer.App;
 public partial class App : Application
 {
     public static ServiceProvider Services { get; private set; } = null!;
+
+    /// <summary>The single-instance manager created in Program.Main (null in design time).</summary>
+    public static SingleInstanceManager? SingleInstance { get; set; }
 
     private static readonly ILogger CrashLogger = NexusLog.Create("UnhandledException");
 
@@ -63,8 +68,20 @@ public partial class App : Application
             _viewModel = Services.GetRequiredService<MainWindowViewModel>();
             StartupTiming.Mark("MainWindowViewModel resolved");
             _viewModel.ApplicationExitRequested += ExitApplication;
+            _viewModel.OpenSettingsRequested += OpenSettingsWindow;
             _mainWindow = new MainWindow { DataContext = _viewModel };
             StartupTiming.Mark("MainWindow created");
+
+            // Route single-instance activation requests and the global hotkey to ShowMainWindow.
+            if (SingleInstance is not null)
+            {
+                SingleInstance.ActivationRequested += () => Dispatcher.UIThread.Post(ShowMainWindow);
+                SingleInstance.StartListening();
+            }
+
+            var globalHotkey = Services.GetRequiredService<IGlobalHotkeyService>();
+            globalHotkey.HotkeyTriggered += _ => Dispatcher.UIThread.Post(ShowMainWindow);
+
             desktop.MainWindow = _mainWindow;
             StartupTiming.Mark("MainWindow assigned (will show)");
 
@@ -148,6 +165,13 @@ public partial class App : Application
         _mainWindow.Activate();
         if (_trayIcon is not null)
             _trayIcon.IsVisible = false;
+    }
+
+    private void OpenSettingsWindow()
+    {
+        if (_mainWindow is null) return;
+        var settings = new SettingsWindow { DataContext = _viewModel };
+        _ = settings.ShowDialog(_mainWindow);
     }
 
     private void ExitApplication()

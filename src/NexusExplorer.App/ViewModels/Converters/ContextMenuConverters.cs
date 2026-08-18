@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
+using FluentIcons.Common;
 using NexusExplorer.Core.Models;
 
 namespace NexusExplorer.App.ViewModels;
@@ -53,6 +54,32 @@ public sealed class IsIconViewModeConverter : IValueConverter
         if (value is ExplorerViewMode mode)
             return mode is not (ExplorerViewMode.List or ExplorerViewMode.Details);
         return true;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Maps a terminal profile's IconKey to a FluentIcons glyph. Each terminal gets a distinct
+/// (closest-available) glyph so the submenu entries are visually distinguishable.
+/// </summary>
+public sealed class TerminalIconConverter : IValueConverter
+{
+    public static readonly TerminalIconConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return value switch
+        {
+            "windows-terminal" => Symbol.WindowConsole,
+            "powershell" => Symbol.Prompt,
+            "powershell-7" => Symbol.CodeText,
+            "cmd" => Symbol.WindowDevTools,
+            "git-bash" => Symbol.CodeBlock,
+            "wsl" => Symbol.WindowDevEdit,
+            _ => Symbol.WindowConsole,
+        };
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

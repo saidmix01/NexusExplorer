@@ -63,6 +63,12 @@ public sealed class UserPreferences
     public double IconZoomLevel { get; set; } = 50;
     public List<string> PinnedFavorites { get; set; } = [];
     public ThemeMode Theme { get; set; } = ThemeMode.Light;
+
+    /// <summary>Whether the "Open Nexus" global hotkey is enabled.</summary>
+    public bool GlobalHotkeyEnabled { get; set; } = true;
+
+    /// <summary>The "Open Nexus" global shortcut, e.g. "Ctrl+Alt+E".</summary>
+    public string GlobalHotkeyShortcut { get; set; } = "Ctrl+Alt+E";
 }
 
 /// <summary>

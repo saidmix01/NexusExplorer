@@ -37,6 +37,9 @@ public static class ServiceCollectionExtensions
         // Installed editor discovery / launch
         services.AddSingleton<IEditorService, EditorService>();
 
+        // External terminal launcher (cross-platform; discovery is registered per platform)
+        services.AddSingleton<ITerminalLauncher, TerminalLauncher>();
+
         // Platform-specific services
         services.AddPlatformServices();
 

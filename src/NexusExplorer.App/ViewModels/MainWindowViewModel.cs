@@ -26,6 +26,9 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IFolderColorService _folderColorService;
     private readonly IFileOperationManager _fileOperationManager;
     private readonly IEditorService _editorService;
+    private readonly ITerminalDiscoveryService _terminalDiscovery;
+    private readonly ITerminalLauncher _terminalLauncher;
+    private readonly IGlobalHotkeyService _globalHotkeyService;
     private readonly ILogger<MainWindowViewModel> _logger;
 
     private CancellationTokenSource? _loadCts;
@@ -447,6 +450,9 @@ public partial class MainWindowViewModel : ObservableObject
         IFolderColorService folderColorService,
         IFileOperationManager fileOperationManager,
         IEditorService editorService,
+        ITerminalDiscoveryService terminalDiscovery,
+        ITerminalLauncher terminalLauncher,
+        IGlobalHotkeyService globalHotkeyService,
         ILogger<MainWindowViewModel>? logger = null)
     {
         StartupTiming.Mark("MainWindowViewModel ctor begin");
@@ -466,6 +472,9 @@ public partial class MainWindowViewModel : ObservableObject
         _fileOperationManager = fileOperationManager;
         _fileOperationManager.Changed += OnFileOperationsChanged;
         _editorService = editorService;
+        _terminalDiscovery = terminalDiscovery;
+        _terminalLauncher = terminalLauncher;
+        _globalHotkeyService = globalHotkeyService;
         _logger = logger ?? NullLogger<MainWindowViewModel>.Instance;
         _historyService.HistoryChanged += (_, _) =>
         {
@@ -530,6 +539,18 @@ public partial class MainWindowViewModel : ObservableObject
         {
             // Send To discovery is non-critical — ignore failures.
         }
+
+        try
+        {
+            var profiles = await Task.Run(_terminalDiscovery.Discover);
+            foreach (var profile in profiles)
+                AvailableTerminalProfiles.Add(profile);
+        }
+        catch (Exception ex)
+        {
+            // Terminal discovery is non-critical — the submenu just stays empty.
+            _logger.LogWarning(ex, "Terminal discovery failed.");
+        }
     }
 
     /// <summary>
@@ -552,6 +573,9 @@ public partial class MainWindowViewModel : ObservableObject
         _folderColorService = null!;
         _fileOperationManager = null!;
         _editorService = null!;
+        _terminalDiscovery = null!;
+        _terminalLauncher = null!;
+        _globalHotkeyService = null!;
         _logger = NullLogger<MainWindowViewModel>.Instance;
         Terminal = new TerminalViewModel();
     }
@@ -573,6 +597,10 @@ public partial class MainWindowViewModel : ObservableObject
                 IsPreviewVisible = state.Preferences.ShowPreviewPanel;
                 IconZoomLevel = state.Preferences.IconZoomLevel;
                 CurrentTheme = state.Preferences.Theme;
+
+                if (!string.IsNullOrWhiteSpace(state.Preferences.GlobalHotkeyShortcut))
+                    GlobalHotkeyShortcut = state.Preferences.GlobalHotkeyShortcut;
+                GlobalHotkeyEnabled = state.Preferences.GlobalHotkeyEnabled;
 
                 // Restore tabs
                 for (int i = 0; i < state.Tabs.Count; i++)
@@ -607,6 +635,8 @@ public partial class MainWindowViewModel : ObservableObject
             if (_tabService.Tabs.Count == 0)
                 _tabService.CreateTab(_platformService.HomePath, "Home");
         }
+
+        RegisterGlobalHotkeyOnStartup();
     }
 
     /// <summary>
@@ -630,7 +660,9 @@ public partial class MainWindowViewModel : ObservableObject
                 ShowPreviewPanel = IsPreviewVisible,
                 IconZoomLevel = IconZoomLevel,
                 PinnedFavorites = _pinnedFavorites.ToList(),
-                Theme = CurrentTheme
+                Theme = CurrentTheme,
+                GlobalHotkeyEnabled = GlobalHotkeyEnabled,
+                GlobalHotkeyShortcut = GlobalHotkeyShortcut
             },
             SidebarGroups = SidebarGroups.Select(g => new SidebarGroupState
             {
@@ -1257,6 +1289,137 @@ public partial class MainWindowViewModel : ObservableObject
     // --- Open with editor ---
 
     public ObservableCollection<EditorInfo> InstalledEditors { get; } = [];
+
+    /// <summary>External terminals detected on this system, shown under "Open in Other Terminal".</summary>
+    public ObservableCollection<TerminalProfile> AvailableTerminalProfiles { get; } = [];
+
+    // --- Global hotkey ---
+
+    private const string GlobalHotkeyId = "open-nexus";
+    private const string DefaultGlobalHotkey = "Ctrl+Alt+E";
+
+    [ObservableProperty]
+    private string _globalHotkeyShortcut = DefaultGlobalHotkey;
+
+    [ObservableProperty]
+    private bool _globalHotkeyEnabled = true;
+
+    [ObservableProperty]
+    private string _globalHotkeyStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _isGlobalHotkeyCapturing;
+
+    public bool IsGlobalHotkeySupported => _globalHotkeyService?.IsSupported ?? false;
+
+    /// <summary>Raised when the user requests to open the Settings dialog.</summary>
+    public event Action? OpenSettingsRequested;
+
+    [RelayCommand]
+    private void OpenSettings() => OpenSettingsRequested?.Invoke();
+
+    [RelayCommand]
+    private void StartGlobalHotkeyCapture()
+    {
+        GlobalHotkeyStatus = "Press a new shortcut... (Esc to cancel)";
+        IsGlobalHotkeyCapturing = true;
+    }
+
+    [RelayCommand]
+    private void CancelGlobalHotkeyCapture()
+    {
+        IsGlobalHotkeyCapturing = false;
+        if (GlobalHotkeyStatus == "Press a new shortcut... (Esc to cancel)")
+            GlobalHotkeyStatus = string.Empty;
+    }
+
+    public async Task ApplyGlobalHotkeyShortcutAsync(string shortcut)
+    {
+        if (string.IsNullOrWhiteSpace(shortcut)) return;
+
+        var previous = GlobalHotkeyShortcut;
+        GlobalHotkeyShortcut = shortcut;
+
+        if (TryRegisterCurrentHotkey())
+        {
+            GlobalHotkeyStatus = string.Empty;
+            await SaveGlobalHotkeyConfigAsync();
+        }
+        else
+        {
+            // Roll back to the previous shortcut so the user is never left without one.
+            GlobalHotkeyShortcut = previous;
+            if (GlobalHotkeyEnabled)
+                _ = _globalHotkeyService?.Register(new GlobalHotkey { Id = GlobalHotkeyId, Shortcut = previous });
+            GlobalHotkeyStatus = "Shortcut unavailable. It is already registered by another application or Windows.";
+        }
+    }
+
+    public async Task ApplyGlobalHotkeyEnabledAsync()
+    {
+        if (GlobalHotkeyEnabled)
+        {
+            if (!TryRegisterCurrentHotkey())
+            {
+                GlobalHotkeyEnabled = false;
+                GlobalHotkeyStatus = "Shortcut unavailable. It is already registered by another application or Windows.";
+            }
+            else
+            {
+                GlobalHotkeyStatus = string.Empty;
+            }
+        }
+        else
+        {
+            _globalHotkeyService?.Unregister(GlobalHotkeyId);
+            GlobalHotkeyStatus = string.Empty;
+        }
+
+        await SaveGlobalHotkeyConfigAsync();
+    }
+
+    [RelayCommand]
+    private async Task ResetGlobalHotkeyAsync()
+    {
+        await ApplyGlobalHotkeyShortcutAsync(DefaultGlobalHotkey);
+    }
+
+    private bool TryRegisterCurrentHotkey()
+    {
+        if (_globalHotkeyService is null || !_globalHotkeyService.IsSupported)
+            return true; // nothing to register on unsupported platforms
+
+        _globalHotkeyService.Unregister(GlobalHotkeyId);
+        return _globalHotkeyService.Register(new GlobalHotkey
+        {
+            Id = GlobalHotkeyId,
+            Enabled = GlobalHotkeyEnabled,
+            Shortcut = GlobalHotkeyShortcut,
+        });
+    }
+
+    private void RegisterGlobalHotkeyOnStartup()
+    {
+        if (!GlobalHotkeyEnabled) return;
+
+        if (!TryRegisterCurrentHotkey())
+            GlobalHotkeyStatus = "Shortcut unavailable. It is already registered by another application or Windows.";
+    }
+
+    private async Task SaveGlobalHotkeyConfigAsync()
+    {
+        try
+        {
+            var state = await _statePersistence.LoadAsync() ?? new AppState();
+            state.Preferences.GlobalHotkeyEnabled = GlobalHotkeyEnabled;
+            state.Preferences.GlobalHotkeyShortcut = GlobalHotkeyShortcut;
+            await _statePersistence.SaveAsync(state);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to save global hotkey configuration.");
+        }
+    }
 
     [RelayCommand]
     private void OpenWithEditor(EditorInfo? editor)
@@ -2097,6 +2260,46 @@ public partial class MainWindowViewModel : ObservableObject
         if (targetPath is null) return;
 
         await OpenTerminalAtDirectoryAsync(targetPath);
+    }
+
+    [RelayCommand]
+    private void OpenInOtherTerminal(TerminalProfile? profile)
+    {
+        if (profile is null) return;
+
+        var targetPath = Helpers.TerminalPathHelper.GetTerminalWorkingDirectory(SelectedItem, CurrentPath);
+        OpenExternalTerminal(profile, targetPath);
+    }
+
+    [RelayCommand]
+    private void OpenCurrentInOtherTerminal(TerminalProfile? profile)
+    {
+        if (profile is null) return;
+
+        var targetPath = Helpers.TerminalPathHelper.GetTerminalWorkingDirectory(null, CurrentPath);
+        OpenExternalTerminal(profile, targetPath);
+    }
+
+    private void OpenExternalTerminal(TerminalProfile profile, string? targetPath)
+    {
+        if (string.IsNullOrWhiteSpace(targetPath) || !Directory.Exists(targetPath))
+        {
+            StatusText = "The target folder no longer exists.";
+            _logger.LogWarning("Cannot open terminal '{Name}': directory does not exist ({Directory}).",
+                profile.Name, targetPath);
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation("Launching {Name} in {Directory}.", profile.Name, targetPath);
+            _terminalLauncher.Launch(profile, targetPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to launch terminal {Name} in {Directory}.", profile.Name, targetPath);
+            StatusText = $"Cannot open {profile.Name}: {ex.Message}";
+        }
     }
 
     private async Task OpenTerminalAtDirectoryAsync(string path)

@@ -480,6 +480,8 @@
                                         <Separator />
                                         <MenuItem Header="Set as Default Explorer" Command="{Binding SetAsDefaultExplorerCommand}" />
                                         <MenuItem Header="Restore Windows Explorer" Command="{Binding RestoreDefaultExplorerCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Settings..." Command="{Binding OpenSettingsCommand}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
                             </Button>
@@ -813,6 +815,20 @@
                                         <MenuItem Header="{Binding UndoDescription, TargetNullValue='Undo'}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
                                         <Separator />
                                         <MenuItem Header="Open in Terminal" Command="{Binding OpenCurrentInTerminalCommand}" />
+                                        <MenuItem Header="Open in Other Terminal" ItemsSource="{Binding AvailableTerminalProfiles}" Tag="{Binding}">
+                                            <MenuItem.Styles>
+                                                <Style Selector="MenuItem > MenuItem">
+                                                    <Setter Property="Header" Value="{Binding Name}" />
+                                                    <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.OpenCurrentInOtherTerminalCommand}" />
+                                                    <Setter Property="CommandParameter" Value="{Binding}" />
+                                                    <Setter Property="Icon">
+                                                        <Template>
+                                                            <fluent:SymbolIcon Symbol="{Binding IconKey, Converter={x:Static vm:TerminalIconConverter.Instance}}" FontSize="14" />
+                                                        </Template>
+                                                    </Setter>
+                                                </Style>
+                                            </MenuItem.Styles>
+                                        </MenuItem>
                                         <MenuItem Header="Pin to Quick Access" Command="{Binding PinCurrentFolderCommand}" />
                                         <Separator />
                                         <MenuItem Header="New">

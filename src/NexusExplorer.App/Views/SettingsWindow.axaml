@@ -1,0 +1,74 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NexusExplorer.App.ViewModels"
+        x:Class="NexusExplorer.App.Views.SettingsWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Settings"
+        Width="540" Height="380"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="{DynamicResource NexusBackground}">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+        <Style Selector="Border.shortcut">
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinWidth" Value="120" />
+        </Style>
+    </Window.Styles>
+
+    <StackPanel Margin="24" Spacing="16">
+        <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" />
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="Keyboard Shortcuts" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="GLOBAL" Classes="section" />
+        </StackPanel>
+
+        <Border Classes="card">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Open Nexus Explorer" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock Text="Open Nexus Explorer from anywhere in Windows." Classes="muted" />
+
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Border Classes="shortcut">
+                        <TextBlock Text="{Binding GlobalHotkeyShortcut}" FontSize="14" />
+                    </Border>
+                    <Button Content="Change" Command="{Binding StartGlobalHotkeyCaptureCommand}"
+                            IsVisible="{Binding !IsGlobalHotkeyCapturing}" />
+                    <Button Content="Cancel" Command="{Binding CancelGlobalHotkeyCaptureCommand}"
+                            IsVisible="{Binding IsGlobalHotkeyCapturing}" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding GlobalHotkeyStatus}" Foreground="Orange" TextWrapping="Wrap" />
+
+                <CheckBox Content="Enable global shortcut" IsChecked="{Binding GlobalHotkeyEnabled, Mode=TwoWay}"
+                          IsCheckedChanged="EnableHotkey_Changed" />
+                <Button Content="Reset to Default" Command="{Binding ResetGlobalHotkeyCommand}"
+                        HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="Windows reserves Win + E for File Explorer. Nexus uses Ctrl + Alt + E by default."
+                   Classes="muted" TextWrapping="Wrap" />
+
+        <Button Content="Close" HorizontalAlignment="Right" Click="Close_Click" MinWidth="90" />
+    </StackPanel>
+</Window>

@@ -3,6 +3,7 @@
              xmlns:vm="using:NexusExplorer.App.ViewModels"
              xmlns:models="using:NexusExplorer.Core.Models"
              xmlns:controls="using:NexusExplorer.App.Controls"
+             xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
              x:Class="NexusExplorer.App.Views.FileIconView"
              x:DataType="vm:MainWindowViewModel">
 
@@ -78,6 +79,20 @@
                                           IsVisible="{Binding Type, Converter={x:Static vm:IsNavigableConverter.Instance}}" />
                                 <MenuItem Header="Open in Terminal" Command="{Binding $parent[UserControl].DataContext.OpenInTerminalCommand}" CommandParameter="{Binding}"
                                           IsVisible="{Binding Type, Converter={x:Static vm:IsNavigableConverter.Instance}}" />
+                                <MenuItem Header="Open in Other Terminal" ItemsSource="{Binding $parent[UserControl].DataContext.AvailableTerminalProfiles}" Tag="{Binding $parent[UserControl].DataContext}">
+                                    <MenuItem.Styles>
+                                        <Style Selector="MenuItem > MenuItem">
+                                            <Setter Property="Header" Value="{Binding Name}" />
+                                            <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.OpenInOtherTerminalCommand}" />
+                                            <Setter Property="CommandParameter" Value="{Binding}" />
+                                            <Setter Property="Icon">
+                                                <Template>
+                                                    <fluent:SymbolIcon Symbol="{Binding IconKey, Converter={x:Static vm:TerminalIconConverter.Instance}}" FontSize="14" />
+                                                </Template>
+                                            </Setter>
+                                        </Style>
+                                    </MenuItem.Styles>
+                                </MenuItem>
                                 <MenuItem Header="Open with editor" IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
                                           ItemsSource="{Binding $parent[UserControl].DataContext.InstalledEditors}"
                                           Tag="{Binding $parent[UserControl].DataContext}">
