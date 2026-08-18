@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusExplorer.App.ViewModels"
+             xmlns:term="using:NexusExplorer.App.Terminal"
+             x:Class="NexusExplorer.App.Views.TerminalView"
+             x:DataType="vm:TerminalViewModel"
+             Focusable="True">
+
+    <Border Background="#0C0C0C"
+            BorderBrush="{DynamicResource NexusTerminalBorder}"
+            BorderThickness="0,1,0,0">
+        <DockPanel>
+
+            <!-- Terminal Toolbar -->
+            <Border DockPanel.Dock="Top"
+                    Background="#1A1A1A"
+                    Padding="10,5">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                        <Button Content="New"
+                                Command="{Binding NewTerminalCommand}"
+                                Background="Transparent" Foreground="#A0A0A0"
+                                BorderThickness="0" Padding="8,4" FontSize="11"
+                                Focusable="False" ToolTip.Tip="New Terminal" />
+                        <Button Content="Clear"
+                                Command="{Binding ClearOutputCommand}"
+                                Background="Transparent" Foreground="#A0A0A0"
+                                BorderThickness="0" Padding="8,4" FontSize="11"
+                                Focusable="False" ToolTip.Tip="Clear" />
+                        <Button Content="&#xD7;"
+                                Command="{Binding TerminateTerminalCommand}"
+                                Background="Transparent" Foreground="#A0A0A0"
+                                BorderThickness="0" Padding="8,4" FontSize="14"
+                                Focusable="False" ToolTip.Tip="Close Terminal" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <TextBlock Text=">_"
+                                   Foreground="#569CD6" FontSize="13" FontWeight="Bold"
+                                   FontFamily="Cascadia Mono, Consolas, monospace"
+                                   VerticalAlignment="Center" />
+                        <Border Background="#2A2A2A" CornerRadius="3" Padding="7,3">
+                            <TextBlock Text="{Binding ShellName}"
+                                       Foreground="#9CDCFE" FontSize="11"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="{Binding WorkingDirectory}"
+                                   Foreground="#606060" FontSize="11"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="400" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Error state -->
+            <Border IsVisible="{Binding HasError}" Padding="20" Background="#0C0C0C">
+                <StackPanel Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="&#x26A0;" FontSize="28" Foreground="#D7BA7D" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#CE9178" FontSize="13"
+                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="500" />
+                </StackPanel>
+            </Border>
+
+            <!-- Terminal rendering surface -->
+            <term:TerminalControl Name="TerminalRenderControl"
+                                  IsVisible="{Binding !HasError}"
+                                  PointerPressed="TerminalSurface_PointerPressed" />
+        </DockPanel>
+    </Border>
+</UserControl>

@@ -1,0 +1,21 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## IDE
+.vs/
+.idea/
+*.swp
+*~
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Build
+publish/
+artifacts/

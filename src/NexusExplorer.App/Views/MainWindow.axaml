@@ -1,0 +1,1325 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NexusExplorer.App.ViewModels"
+        xmlns:models="using:NexusExplorer.Core.Models"
+        xmlns:views="using:NexusExplorer.App.Views"
+        xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
+        xmlns:behaviors="using:NexusExplorer.App.Behaviors"
+        xmlns:controls="using:NexusExplorer.App.Controls"
+        x:Class="NexusExplorer.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Nexus Explorer"
+        Width="1100" Height="720"
+        MinWidth="800" MinHeight="500"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="38"
+        Background="Transparent"
+        SystemDecorations="Full"
+        Icon="/Assets/icon.png">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+    <!-- ============================================================ -->
+    <!-- STYLES: Modern Dashboard — Pill tabs, Glassmorphism,          -->
+    <!-- Neumorphic depth, Electric Cyan accents                       -->
+    <!-- ============================================================ -->
+    <Window.Styles>
+        <!-- ======== BASE UTILITY BUTTON (flat, minimal) ======== -->
+        <Style Selector="Button.macBtn">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="7,4" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusMacBtnForeground}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.macBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusMacBtnHover}" />
+        </Style>
+        <Style Selector="Button.macBtn:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusMacBtnPressed}" />
+        </Style>
+        <Style Selector="Button.macBtn:disabled /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+        <Style Selector="Button.macBtn fluent|SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource NexusMacBtnForeground}" />
+        </Style>
+
+        <!-- ======== NAVIGATION PILL BUTTONS (rounded, modern) ======== -->
+        <Style Selector="Button.navBtn > fluent|SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
+        </Style>
+        <Style Selector="Button.navBtn fluent|SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
+        </Style>
+        <Style Selector="Button.navBtn">
+            <Setter Property="Background" Value="{DynamicResource NexusNavGroupBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusNavBtnBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="MinWidth" Value="32" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.navBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="{DynamicResource NexusNavBtnHoverStart}" Offset="0" />
+                        <GradientStop Color="{DynamicResource NexusNavBtnHoverEnd}" Offset="1" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.navBtn:pressed /template/ ContentPresenter">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="{DynamicResource NexusNavBtnPressedStart}" Offset="0" />
+                        <GradientStop Color="{DynamicResource NexusNavBtnPressedEnd}" Offset="1" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="Button.navBtn:disabled">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+        <Style Selector="Button.navBtn fluent|SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
+        </Style>
+
+        <!-- ======== SEGMENTED VIEW BUTTONS (unified pill group) ======== -->
+        <Style Selector="Button.segBtn">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusSegBtnBorder}" />
+            <Setter Property="BorderThickness" Value="1,1,0,1" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusSegBtnForeground}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="MinWidth" Value="30" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.segBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSegBtnHover}" />
+        </Style>
+        <Style Selector="Button.segBtn:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSegBtnPressed}" />
+        </Style>
+        <Style Selector="Button.segBtn fluent|SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource NexusSegBtnForeground}" />
+        </Style>
+        <Style Selector="Button.segBtnFirst">
+            <Setter Property="CornerRadius" Value="8,0,0,8" />
+        </Style>
+        <Style Selector="Button.segBtnLast">
+            <Setter Property="CornerRadius" Value="0,8,8,0" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <!-- ======== SIDEBAR ======== -->
+        <Style Selector="TextBlock.sidebarHeader">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusSidebarHeaderForeground}" />
+            <Setter Property="Margin" Value="16,18,0,6" />
+            <Setter Property="LetterSpacing" Value="1.2" />
+        </Style>
+        <Style Selector="Button.sidebarGroupHeader">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Margin" Value="4,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.sidebarGroupHeader:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSidebarItemHover}" />
+        </Style>
+        <Style Selector="Button.sidebarNewGroup">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusSidebarHeaderForeground}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.sidebarNewGroup:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSidebarItemHover}" />
+        </Style>
+
+        <!-- ======== SEARCH BOX (pill, accent on focus) ======== -->
+        <Style Selector="TextBox.searchBox">
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusSearchBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource NexusSearchBackground}" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinHeight" Value="28" />
+        </Style>
+        <Style Selector="TextBox.searchBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusSearchFocusBorder}" />
+            <Setter Property="Background" Value="{DynamicResource NexusSearchFocusBackground}" />
+        </Style>
+
+        <!-- ======== TEXT INPUTS ======== -->
+        <Style Selector="TextBox.nexusInput">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusInputBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource NexusInputBackground}" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="MinHeight" Value="32" />
+        </Style>
+        <Style Selector="TextBox.nexusInput:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusInputFocusBorder}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+        </Style>
+        <Style Selector="TextBox.nexusInput:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusInputHoverBorder}" />
+        </Style>
+
+        <!-- Inline rename -->
+        <Style Selector="TextBox.inlineRename">
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource NexusInputBackground}" />
+            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinHeight" Value="24" />
+        </Style>
+        <Style Selector="TextBox.inlineRename:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusFocusBorder}" />
+        </Style>
+
+        <!-- ======== TAB PILLS (glassmorphism, accent indicator) ======== -->
+        <Style Selector="Border.tabItem">
+            <Setter Property="Padding" Value="14,6,10,6" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="MinWidth" Value="80" />
+            <Setter Property="MaxWidth" Value="200" />
+            <Setter Property="Margin" Value="3,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <!-- ======== FILE GRID / LIST SELECTION ======== -->
+        <Style Selector="Border.fileGridItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+
+        <Style Selector="ListBox.fileListBox ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+        </Style>
+        <Style Selector="ListBox.fileListBox ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="ListBox.fileListBox ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSelectionHover}" />
+        </Style>
+    </Window.Styles>
+
+    <!-- ============================================================ -->
+    <!-- MAIN LAYOUT                                                   -->
+    <!-- ============================================================ -->
+    <Panel>
+        <!-- Window chrome background with brushed metal gradient -->
+        <Border CornerRadius="6" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="0.5" BoxShadow="0 2 8 0 #20000000">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Color="{DynamicResource NexusChromeGradientStart}" Offset="0.0" />
+                    <GradientStop Color="{DynamicResource NexusChromeGradientMid1}" Offset="0.03" />
+                    <GradientStop Color="{DynamicResource NexusChromeGradientMid2}" Offset="0.05" />
+                    <GradientStop Color="{DynamicResource NexusChromeGradientMid3}" Offset="0.1" />
+                    <GradientStop Color="{DynamicResource NexusChromeGradientEnd}" Offset="1.0" />
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+                <!-- ====================================================== -->
+                <!-- ROW 0: UNIFIED TITLEBAR + TABS (macOS style)            -->
+                <!-- Traffic lights left, pill tabs, empty drag center        -->
+                <!-- ====================================================== -->
+                <Border Grid.Row="0" IsHitTestVisible="True"
+                        Name="TitleBarArea"
+                        Padding="0,4,0,0"
+                        BorderBrush="{DynamicResource NexusTabBarBorder}" BorderThickness="0,0,0,1">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                            <GradientStop Color="{DynamicResource NexusTitleBarGradientStart}" Offset="0" />
+                            <GradientStop Color="{DynamicResource NexusTitleBarGradientEnd}" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" MinHeight="40">
+                        <!-- LEFT: Traffic light buttons (close/minimize/maximize) -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8"
+                                    Margin="14,0,0,0" VerticalAlignment="Center">
+                            <Button Name="CloseButton" Width="12" Height="12" Padding="0"
+                                    CornerRadius="6" Background="#FF5F57"
+                                    BorderBrush="#E0443E" BorderThickness="0.5"
+                                    ToolTip.Tip="Close" Click="CloseButton_Click"
+                                    AutomationProperties.Name="Close Window" />
+                            <Button Name="MinimizeButton" Width="12" Height="12" Padding="0"
+                                    CornerRadius="6" Background="#FFBD2E"
+                                    BorderBrush="#DEA123" BorderThickness="0.5"
+                                    ToolTip.Tip="Minimize" Click="MinimizeButton_Click"
+                                    AutomationProperties.Name="Minimize Window" />
+                            <Button Name="MaximizeButton" Width="12" Height="12" Padding="0"
+                                    CornerRadius="6" Background="#28C940"
+                                    BorderBrush="#1DAD2B" BorderThickness="0.5"
+                                    ToolTip.Tip="Maximize" Click="MaximizeButton_Click"
+                                    AutomationProperties.Name="Maximize Window" />
+                        </StackPanel>
+
+                        <!-- Drag offset spacer (~60px) -->
+                        <Panel Grid.Column="1" Width="48" />
+
+                        <!-- TABS: Pill tabs + New tab button (scrollable for overflow) -->
+                        <ScrollViewer Grid.Column="2"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      VerticalAlignment="Center"
+                                      Margin="0,4,0,4"
+                                      Name="TabScrollViewer"
+                                      PointerWheelChanged="TabScroll_PointerWheelChanged">
+                            <StackPanel Orientation="Horizontal" Spacing="4"
+                                        Name="TabBarArea"
+                                        DoubleTapped="TabBar_DoubleTapped">
+                                <!-- Tab pills -->
+                                <ItemsControl ItemsSource="{Binding Tabs}" Name="TabItemsControl">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Classes="tabItem"
+                                                    Background="{Binding IsActive, Converter={x:Static vm:TabActiveBackgroundConverter.Instance}}"
+                                                    BorderThickness="1.5"
+                                                    PointerPressed="Tab_PointerPressed"
+                                                    PointerMoved="Tab_PointerMoved"
+                                                    PointerReleased="Tab_PointerReleased"
+                                                    DragDrop.AllowDrop="True">
+                                                <Border.BorderBrush>
+                                                    <MultiBinding Converter="{x:Static vm:FolderColorTabBorderMultiConverter.Instance}">
+                                                        <Binding Path="FolderColor" />
+                                                        <Binding Path="IsActive" />
+                                                    </MultiBinding>
+                                                </Border.BorderBrush>
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Duplicate Tab" Click="TabCtx_DuplicateTab" />
+                                                        <Separator />
+                                                        <MenuItem Header="Close Tab" Click="TabCtx_CloseTab" />
+                                                        <MenuItem Header="Close Other Tabs" Click="TabCtx_CloseOtherTabs" />
+                                                        <MenuItem Header="Close All Tabs" Click="TabCtx_CloseAllTabs" />
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <!-- Folder color dot (visible when folder has custom color) -->
+                                                    <Ellipse Grid.Column="0" Width="7" Height="7"
+                                                             Fill="{Binding FolderColor, Converter={x:Static vm:FolderColorBrushConverter.Instance}}"
+                                                             Margin="0,0,6,0" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                                               FontSize="12" FontWeight="Medium"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource NexusText}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <Button Grid.Column="2" Content="&#xD7;" FontSize="11"
+                                                            Padding="4,2" Margin="8,0,0,0"
+                                                            Background="Transparent" BorderThickness="0"
+                                                            Foreground="{DynamicResource NexusTabCloseButton}"
+                                                            CornerRadius="10"
+                                                            VerticalAlignment="Center" Click="TabClose_Click" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <!-- New Tab: simple circle right after tabs -->
+                                <Button Command="{Binding NewTabCommand}"
+                                        Background="Transparent" BorderThickness="0"
+                                        Foreground="{DynamicResource NexusTabCloseButton}"
+                                        Padding="0" Width="24" Height="24"
+                                        CornerRadius="12"
+                                        FontSize="16" FontWeight="Light"
+                                        Content="+" Cursor="Hand"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        ToolTip.Tip="New Tab (Ctrl+T)"
+                                        AutomationProperties.Name="New Tab" />
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- RIGHT: App icon (subtle branding) -->
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
+                                    Margin="0,0,14,0" VerticalAlignment="Center">
+                            <Image Source="/Assets/icon.png" Width="14" Height="14" Opacity="0.6" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ====================================================== -->
+                <!-- ROW 1: TOOLBAR (Modern grouped controls + dark address) -->
+                <!-- ====================================================== -->
+                <Border Grid.Row="1" Padding="12,8"
+                        BorderBrush="{DynamicResource NexusToolbarBorder}" BorderThickness="0,0,0,1"
+                        Background="{DynamicResource NexusSurface}">
+
+                    <DockPanel>
+                        <!-- LEFT: Navigation group (rounded panel) -->
+                        <Border DockPanel.Dock="Left"
+                                Background="{DynamicResource NexusNavGroupBackground}"
+                                BorderBrush="{DynamicResource NexusNavGroupBorder}"
+                                BorderThickness="1" CornerRadius="10"
+                                Padding="4,3" Margin="0,0,10,0"
+                                VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <!-- Back / Forward -->
+                                <Button Classes="navBtn" BorderThickness="0"
+                                        Command="{Binding GoBackCommand}"
+                                        IsEnabled="{Binding CanGoBack}"
+                                        ToolTip.Tip="Back (Alt+Left)">
+                                    <fluent:SymbolIcon Symbol="ArrowLeft" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                                </Button>
+                                <Button Classes="navBtn" BorderThickness="0"
+                                        Command="{Binding GoForwardCommand}"
+                                        IsEnabled="{Binding CanGoForward}"
+                                        ToolTip.Tip="Forward (Alt+Right)">
+                                    <fluent:SymbolIcon Symbol="ArrowRight" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                                </Button>
+                                <Button Classes="navBtn" BorderThickness="0"
+                                        Command="{Binding GoUpCommand}"
+                                        IsEnabled="{Binding CanGoUp}"
+                                        ToolTip.Tip="Go Up (Alt+Up)">
+                                    <fluent:SymbolIcon Symbol="ArrowUp" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                                </Button>
+                                <Button Classes="navBtn" BorderThickness="0"
+                                        Command="{Binding RefreshCommand}"
+                                        ToolTip.Tip="Refresh (F5)">
+                                    <fluent:SymbolIcon Symbol="ArrowClockwise" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- View mode segmented group -->
+                        <Border DockPanel.Dock="Left"
+                                Background="{DynamicResource NexusNavGroupBackground}"
+                                BorderBrush="{DynamicResource NexusNavGroupBorder}"
+                                BorderThickness="1" CornerRadius="10"
+                                Padding="2,2" Margin="0,0,10,0"
+                                VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="0">
+                                <Button Classes="segBtn segBtnFirst"
+                                        Command="{Binding SetLargeIconsViewCommand}"
+                                        ToolTip.Tip="Icons">
+                                    <fluent:SymbolIcon Symbol="Grid" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
+                                </Button>
+                                <Button Classes="segBtn"
+                                        Command="{Binding SetListViewCommand}"
+                                        ToolTip.Tip="List">
+                                    <fluent:SymbolIcon Symbol="TextBulletList" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
+                                </Button>
+                                <Button Classes="segBtn"
+                                        Command="{Binding SetDetailsViewCommand}"
+                                        ToolTip.Tip="Details">
+                                    <fluent:SymbolIcon Symbol="AppsList" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
+                                </Button>
+                                <Button Classes="segBtn segBtnLast"
+                                        Command="{Binding SetMediumIconsViewCommand}"
+                                        ToolTip.Tip="Tiles">
+                                    <fluent:SymbolIcon Symbol="SlideLayout" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Actions + Layout controls -->
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4"
+                                    VerticalAlignment="Center" Margin="0,0,10,0">
+                            <!-- Gear action button -->
+                            <Button Classes="navBtn" ToolTip.Tip="Actions">
+                                <fluent:SymbolIcon Symbol="Settings" FontSize="15" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="New Folder" Command="{Binding CreateFolderCommand}" />
+                                        <MenuItem Header="New File" Command="{Binding CreateFileCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Show Item Information" Command="{Binding ToggleShowItemInfoCommand}" />
+                                        <MenuItem Header="Show Hidden Files" Command="{Binding ToggleShowHiddenFilesCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Sort by Name" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Name}" />
+                                        <MenuItem Header="Sort by Date" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.DateModified}" />
+                                        <MenuItem Header="Sort by Size" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Size}" />
+                                        <MenuItem Header="Sort by Type" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Type}" />
+                                        <Separator />
+                                        <MenuItem Header="Appearance">
+                                            <MenuItem Header="Light" Command="{Binding SetThemeLightCommand}" />
+                                            <MenuItem Header="Dark" Command="{Binding SetThemeDarkCommand}" />
+                                            <MenuItem Header="System" Command="{Binding SetThemeSystemCommand}" />
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="Set as Default Explorer" Command="{Binding SetAsDefaultExplorerCommand}" />
+                                        <MenuItem Header="Restore Windows Explorer" Command="{Binding RestoreDefaultExplorerCommand}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <!-- Layout mode toggle -->
+                            <Border BorderBrush="{DynamicResource NexusLayoutModeBorder}" BorderThickness="1" CornerRadius="8"
+                                    Padding="2">
+                                <StackPanel Orientation="Horizontal" Spacing="0">
+                                    <Button Classes="macBtn" Padding="6,4"
+                                            Command="{Binding SetExplorerOnlyCommand}"
+                                            ToolTip.Tip="Explorer Only">
+                                        <fluent:SymbolIcon Symbol="Folder" FontSize="12" Foreground="{DynamicResource NexusMacBtnForeground}" />
+                                    </Button>
+                                    <Button Classes="macBtn" Padding="6,4"
+                                            Command="{Binding SetSplitCommand}"
+                                            ToolTip.Tip="Split View">
+                                        <fluent:SymbolIcon Symbol="PanelRight" FontSize="12" Foreground="{DynamicResource NexusMacBtnForeground}" />
+                                    </Button>
+                                    <Button Classes="macBtn" Padding="6,4"
+                                            Command="{Binding SetTerminalOnlyCommand}"
+                                            ToolTip.Tip="Terminal Only">
+                                        <fluent:SymbolIcon Symbol="WindowConsole" FontSize="12" Foreground="{DynamicResource NexusMacBtnForeground}" />
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Terminal position toggle -->
+                            <Button Classes="navBtn"
+                                    Command="{Binding ToggleSplitOrientationCommand}"
+                                    ToolTip.Tip="Toggle Terminal Position (Right/Bottom)">
+                                <fluent:SymbolIcon Symbol="PanelBottom" FontSize="12" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                            </Button>
+
+                            <!-- Preview toggle -->
+                            <Button Classes="navBtn"
+                                    Command="{Binding TogglePreviewCommand}"
+                                    ToolTip.Tip="Toggle Preview">
+                                <fluent:SymbolIcon Symbol="Eye" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                            </Button>
+
+                            <!-- File operation progress (minimized) -->
+                            <Button Classes="navBtn"
+                                    IsVisible="{Binding IsOperationIndicatorVisible}"
+                                    Command="{Binding ShowFileOperationCenterCommand}"
+                                    ToolTip.Tip="{Binding OperationSummaryText}">
+                                <Grid Width="18" Height="18">
+                                    <controls:CircularProgressControl Value="{Binding OverallProgress}"
+                                                                      TrackBrush="{DynamicResource NexusProgressTrack}"
+                                                                      ProgressBrush="{DynamicResource NexusAccent}"
+                                                                      StrokeThickness="2" />
+                                    <TextBlock Text="{Binding OverallProgress, StringFormat='{}{0:F0}%'}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="7" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource NexusText}" />
+                                </Grid>
+                            </Button>
+
+                            <!-- Theme toggle button -->
+                            <Button Classes="navBtn"
+                                    Command="{Binding ToggleThemeCommand}"
+                                    ToolTip.Tip="Toggle Dark/Light Mode">
+                                <fluent:SymbolIcon Symbol="WeatherMoon" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                            </Button>
+                        </StackPanel>
+
+                        <!-- RIGHT: Search box -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                    VerticalAlignment="Center" Margin="10,0,0,0">
+                            <TextBox Classes="searchBox" Width="220"
+                                     Text="{Binding SearchQuery, Mode=TwoWay}"
+                                     Watermark="Search"
+                                     Name="SearchBoxTextBox"
+                                     AutomationProperties.Name="Search files and folders"
+                                     KeyDown="SearchBox_KeyDown"
+                                     TextChanged="SearchBox_TextChanged">
+                                <TextBox.InnerLeftContent>
+                                    <fluent:SymbolIcon Symbol="Search" FontSize="12" Margin="6,0,4,0"
+                                                       Foreground="{DynamicResource NexusSearchIcon}" />
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+                        </StackPanel>
+
+                        <!-- CENTER: Address bar (breadcrumb hierarchy) -->
+                        <Border Classes.edit="{Binding IsAddressBarEditing}"
+                                Background="{DynamicResource NexusAddressBarBackground}"
+                                CornerRadius="10"
+                                BorderBrush="{DynamicResource NexusAddressBarBorder}"
+                                BorderThickness="1"
+                                Padding="0" Margin="0"
+                                MinHeight="32"
+                                VerticalAlignment="Center"
+                                DoubleTapped="AddressBar_DoubleTapped">
+                            <Border.Styles>
+                                <Style Selector="Border.edit">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource NexusAddressBarEditBorder}" />
+                                </Style>
+                            </Border.Styles>
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Copy address" Command="{Binding CopyCurrentPathCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="Edit address" Command="{Binding StartAddressBarEditCommand}" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
+                            <Panel VerticalAlignment="Center">
+                                <!-- Breadcrumb path (visible when not editing) -->
+                                <ScrollViewer IsVisible="{Binding !IsAddressBarEditing}"
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="Disabled"
+                                              Name="BreadcrumbScrollViewer">
+                                    <StackPanel Orientation="Horizontal"
+                                                Margin="6,0">
+                                        <!-- Root icon -->
+                                        <Button Background="Transparent" BorderThickness="0"
+                                                Padding="4,4" Cursor="Hand" VerticalAlignment="Center"
+                                                Command="{Binding GoUpCommand}"
+                                                IsEnabled="{Binding CanGoUp}">
+                                            <fluent:SymbolIcon Symbol="FolderOpen" FontSize="14"
+                                                               Foreground="{DynamicResource NexusBreadcrumbIcon}" />
+                                        </Button>
+                                        <!-- Breadcrumb segments (dimmed path, bold current dir) -->
+                                        <ItemsControl ItemsSource="{Binding Breadcrumbs}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:BreadcrumbItem">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <!-- Chevron separator -->
+                                                        <TextBlock Text="&#x203A;" VerticalAlignment="Center"
+                                                                   FontSize="14"
+                                                                   Foreground="{DynamicResource NexusBreadcrumbSeparator}"
+                                                                   Margin="3,0" />
+                                                        <!-- Clickable segment: last item is bold+highlighted, others dimmed -->
+                                                        <Button Command="{Binding DataContext.BreadcrumbNavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                Background="Transparent" BorderThickness="0"
+                                                                Padding="5,3" FontSize="12"
+                                                                Cursor="Hand" CornerRadius="5">
+                                                            <Panel>
+                                                                <!-- Parent segment: dimmed foreground -->
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           FontSize="12"
+                                                                           Foreground="{DynamicResource NexusBreadcrumbForeground}"
+                                                                           IsVisible="{Binding !IsLast}" />
+                                                                <!-- Current segment: bold, active foreground -->
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           FontSize="12" FontWeight="Bold"
+                                                                           Foreground="{DynamicResource NexusBreadcrumbActiveForeground}"
+                                                                           IsVisible="{Binding IsLast}" />
+                                                            </Panel>
+                                                        </Button>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </ScrollViewer>
+                                <!-- Clickable overlay removed — double-click handled by parent address bar Border -->
+                                <!-- Text editing mode: full-width input -->
+                                <TextBox Name="AddressBarTextBox" Text="{Binding AddressBarText, Mode=TwoWay}"
+                                         IsVisible="{Binding IsAddressBarEditing}"
+                                         AutomationProperties.Name="Address bar - enter path"
+                                         FontSize="12"
+                                         Foreground="{DynamicResource NexusTextPrimary}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         Padding="10,6"
+                                         VerticalContentAlignment="Center"
+                                         KeyDown="AddressBar_KeyDown" LostFocus="AddressBar_LostFocus" />
+                            </Panel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+
+                <!-- ====================================================== -->
+                <!-- ROW 2: BODY (Sidebar + Content + Terminal)              -->
+                <!-- ====================================================== -->
+                <Grid Grid.Row="2" ColumnDefinitions="185,Auto,*">
+
+                    <!-- ====== SIDEBAR (frosted depth, accent selection) ====== -->
+                    <Border Grid.Column="0" BorderBrush="{DynamicResource NexusSidebarBorder}" BorderThickness="0,0,1,0"
+                            Name="SidebarBorder"
+                            AutomationProperties.Name="Navigation sidebar">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                <GradientStop Color="{DynamicResource NexusSidebarGradientStart}" Offset="0" />
+                                <GradientStop Color="{DynamicResource NexusSidebarGradientEnd}" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid RowDefinitions="*,Auto">
+                            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding SidebarGroups}" Margin="0,8,0,4">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:SidebarGroup">
+                                            <StackPanel>
+                                                <!-- Group header (collapsible, keyboard accessible) -->
+                                                <Button Classes="sidebarGroupHeader"
+                                                        Click="SidebarGroupHeader_Click">
+                                                    <Button.ContextMenu>
+                                                        <ContextMenu x:CompileBindings="False">
+                                                            <MenuItem Header="Rename Group"
+                                                                      Command="{Binding $parent[Window].DataContext.RenameGroupCommand}"
+                                                                      CommandParameter="{Binding}"
+                                                                      IsVisible="{Binding !IsSystem}" />
+                                                            <MenuItem Header="Delete Group"
+                                                                      Command="{Binding $parent[Window].DataContext.DeleteGroupCommand}"
+                                                                      CommandParameter="{Binding}"
+                                                                      IsVisible="{Binding !IsSystem}" />
+                                                            <MenuItem Header="Move Up"
+                                                                      Command="{Binding $parent[Window].DataContext.MoveGroupUpCommand}"
+                                                                      CommandParameter="{Binding}"
+                                                                      IsVisible="{Binding !IsSystem}" />
+                                                            <MenuItem Header="Move Down"
+                                                                      Command="{Binding $parent[Window].DataContext.MoveGroupDownCommand}"
+                                                                      CommandParameter="{Binding}"
+                                                                      IsVisible="{Binding !IsSystem}" />
+                                                        </ContextMenu>
+                                                    </Button.ContextMenu>
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBlock Text="{Binding IsExpanded, Converter={x:Static vm:IsExpandedToGlyphConverter.Instance}}"
+                                                                   FontSize="10" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource NexusSidebarHeaderForeground}" />
+                                                        <TextBlock Text="{Binding Name}" Classes="sidebarHeader" Margin="0" />
+                                                    </StackPanel>
+                                                </Button>
+
+                                                <!-- Group items -->
+                                                <ItemsControl ItemsSource="{Binding Items}" IsVisible="{Binding IsExpanded}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:NavigationItem">
+                                                            <Border Padding="12,8" Margin="8,2" CornerRadius="8"
+                                                                    Background="Transparent" Cursor="Hand"
+                                                                    Opacity="{Binding IsAvailable, Converter={x:Static vm:IsAvailableToOpacityConverter.Instance}}"
+                                                                    PointerPressed="SidebarItem_PointerPressed">
+                                                                <Border.ContextMenu>
+                                                                    <ContextMenu x:CompileBindings="False">
+                                                                        <MenuItem Header="Unpin from Quick Access"
+                                                                                  Command="{Binding $parent[Window].DataContext.UnpinFromFavoritesCommand}"
+                                                                                  CommandParameter="{Binding Path}"
+                                                                                  IsVisible="{Binding Kind, Converter={x:Static vm:IsFavoriteKindConverter.Instance}}" />
+                                                                        <MenuItem Header="Remove from Group"
+                                                                                  Command="{Binding $parent[Window].DataContext.RemoveFromGroupCommand}"
+                                                                                  CommandParameter="{Binding}"
+                                                                                  IsVisible="{Binding Kind, Converter={x:Static vm:IsCustomItemConverter.Instance}}" />
+                                                                        <MenuItem Header="Open in New Tab"
+                                                                                  Command="{Binding $parent[Window].DataContext.NewTabAtPathCommand}"
+                                                                                  CommandParameter="{Binding Path}" />
+                                                                    </ContextMenu>
+                                                                </Border.ContextMenu>
+                                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                                    <fluent:SymbolIcon Symbol="{Binding Name, Converter={x:Static vm:NavigationNameToIconConverter.Instance}}"
+                                                                                       Foreground="{Binding Name, Converter={x:Static vm:NavigationNameToColorConverter.Instance}}"
+                                                                                       FontSize="16" VerticalAlignment="Center" IconVariant="Filled" />
+                                                                    <TextBlock Text="{Binding Name}" FontSize="13"
+                                                                               VerticalAlignment="Center"
+                                                                               Foreground="{DynamicResource NexusSidebarItemForeground}" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <!-- New Group -->
+                            <Button Grid.Row="1" Classes="sidebarNewGroup" Margin="12,0,12,10"
+                                    Command="{Binding NewGroupCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <fluent:SymbolIcon Symbol="Add" FontSize="12" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource NexusSidebarHeaderForeground}" />
+                                    <TextBlock Text="New Group" FontSize="12" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Sidebar splitter (resizable) -->
+                    <GridSplitter Grid.Column="1" Width="5" Background="Transparent"
+                                  ResizeDirection="Columns" />
+
+                    <!-- ====== CONTENT GRID (Explorer | Splitter | Terminal) ====== -->
+                    <Grid Grid.Column="2" Name="ContentGrid"
+                          ColumnDefinitions="*,0,0"
+                          RowDefinitions="*,0,0">
+
+                        <!-- === EXPLORER GRID (FileView | PreviewSplitter | Preview) === -->
+                        <Grid Grid.Column="0" Name="ExplorerGrid"
+                              ColumnDefinitions="*,0,0">
+
+                            <!-- File content area -->
+                            <Border Grid.Column="0" Background="{DynamicResource NexusFileViewBackground}" Padding="0"
+                                    behaviors:DragDropBehavior.IsEnabled="True">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="View">
+                                            <MenuItem Header="Extra Large Icons" Command="{Binding SetExtraLargeIconsViewCommand}" />
+                                            <MenuItem Header="Large Icons" Command="{Binding SetLargeIconsViewCommand}" />
+                                            <MenuItem Header="Medium Icons" Command="{Binding SetMediumIconsViewCommand}" />
+                                            <MenuItem Header="Small Icons" Command="{Binding SetSmallIconsViewCommand}" />
+                                            <MenuItem Header="List" Command="{Binding SetListViewCommand}" />
+                                            <MenuItem Header="Details" Command="{Binding SetDetailsViewCommand}" />
+                                        </MenuItem>
+                                        <MenuItem Header="Sort by">
+                                            <MenuItem Header="Name" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Name}" />
+                                            <MenuItem Header="Date modified" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.DateModified}" />
+                                            <MenuItem Header="Type" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Type}" />
+                                            <MenuItem Header="Size" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Size}" />
+                                            <Separator />
+                                            <MenuItem Header="Ascending" Command="{Binding SetSortDirectionCommand}" CommandParameter="{x:Static models:SortDirection.Ascending}" />
+                                            <MenuItem Header="Descending" Command="{Binding SetSortDirectionCommand}" CommandParameter="{x:Static models:SortDirection.Descending}" />
+                                        </MenuItem>
+                                        <MenuItem Header="Group by">
+                                            <MenuItem Header="None" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.None}" />
+                                            <MenuItem Header="Name" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.Name}" />
+                                            <MenuItem Header="Date modified" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.DateModified}" />
+                                            <MenuItem Header="Type" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.Type}" />
+                                            <MenuItem Header="Size" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.Size}" />
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="Show hidden files" Command="{Binding ToggleShowHiddenFilesCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Refresh" Command="{Binding RefreshCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Paste" Command="{Binding PasteCommand}" IsEnabled="{Binding HasClipboardContent}" />
+                                        <MenuItem Header="{Binding UndoDescription, TargetNullValue='Undo'}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
+                                        <Separator />
+                                        <MenuItem Header="Open in Terminal" Command="{Binding OpenCurrentInTerminalCommand}" />
+                                        <MenuItem Header="Pin to Quick Access" Command="{Binding PinCurrentFolderCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="New">
+                                            <MenuItem Header="Folder" Command="{Binding CreateFolderCommand}" />
+                                            <MenuItem Header="Text Document" Command="{Binding CreateFileCommand}" />
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Panel>
+                                    <!-- State overlays -->
+                                    <TextBlock Text="Loading..." IsVisible="{Binding IsLoading}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="14" Foreground="{DynamicResource NexusTextTertiary}" />
+                                    <TextBlock Text="This folder is empty" IsVisible="{Binding IsEmpty}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="14" Foreground="{DynamicResource NexusTextTertiary}" />
+                                    <StackPanel IsVisible="{Binding HasError}"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                                        <TextBlock Text="&#x26A0;" FontSize="32" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource NexusDanger}" />
+                                        <TextBlock Text="{Binding ErrorMessage}" FontSize="13"
+                                                   Foreground="{DynamicResource NexusTextSecondary}"
+                                                   TextWrapping="Wrap" MaxWidth="400" TextAlignment="Center" />
+                                    </StackPanel>
+
+                                    <!-- FileView (handles all view modes internally) -->
+                                    <views:FileView DataContext="{Binding}" />
+
+                                    <!-- Rubber-band selection rectangle -->
+                                    <Border Name="RubberBand" IsVisible="False"
+                                            Background="{DynamicResource NexusRubberBandFill}"
+                                            BorderBrush="{DynamicResource NexusRubberBandStroke}"
+                                            BorderThickness="1"
+                                            IsHitTestVisible="False" />
+                                </Panel>
+                            </Border>
+
+                            <!-- Preview splitter -->
+                            <GridSplitter Grid.Column="1" Width="5" Background="Transparent"
+                                          ResizeDirection="Columns"
+                                          Name="PreviewSplitter" />
+
+                            <!-- === PREVIEW PANEL === -->
+                            <Border Grid.Column="2" Background="{DynamicResource NexusPreviewBackground}"
+                                    BorderBrush="{DynamicResource NexusPreviewBorder}" BorderThickness="1,0,0,0"
+                                    Name="PreviewPanel" IsVisible="{Binding IsPreviewVisible}">
+                                <DockPanel>
+                                    <!-- Preview header -->
+                                    <Border DockPanel.Dock="Top" Padding="12,8"
+                                            BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="0,0,0,1">
+                                        <TextBlock Text="Preview" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource NexusTextSecondary}" />
+                                    </Border>
+
+                                    <!-- Preview content -->
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
+                                        <StackPanel Spacing="12">
+                                            <!-- No selection -->
+                                            <TextBlock IsVisible="{Binding !SelectedItem}"
+                                                       Text="Select a file to preview"
+                                                       FontSize="13"
+                                                       Foreground="{DynamicResource NexusPreviewPlaceholder}"
+                                                       HorizontalAlignment="Center" Margin="0,40" />
+
+                                            <!-- Image preview -->
+                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsImagePreviewConverter.Instance}}" Spacing="12">
+                                                <Border Background="{DynamicResource NexusPreviewImageBackground}" CornerRadius="4" Padding="8"
+                                                        HorizontalAlignment="Center">
+                                                    <Image Source="{Binding PreviewImagePath, Converter={x:Static vm:PathToBitmapConverter.Instance}}"
+                                                           MaxHeight="320" Stretch="Uniform" StretchDirection="DownOnly" />
+                                                </Border>
+                                                <StackPanel Spacing="4" Margin="0,4,0,0">
+                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
+                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
+                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    <TextBlock Text="{Binding PreviewLastModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="11"
+                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Text preview -->
+                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsTextPreviewConverter.Instance}}" Spacing="10">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
+                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
+                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                </StackPanel>
+                                                <Border Background="{DynamicResource NexusPreviewTextBackground}" CornerRadius="4"
+                                                        BorderBrush="{DynamicResource NexusPreviewTextBorder}" BorderThickness="1" Padding="8" MaxHeight="400">
+                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                                        <TextBlock Text="{Binding PreviewTextContent}" FontFamily="Cascadia Mono,Consolas,monospace" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusPreviewTextForeground}" TextWrapping="NoWrap" />
+                                                    </ScrollViewer>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <!-- Unsupported -->
+                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsUnsupportedPreviewConverter.Instance}}" Spacing="8" HorizontalAlignment="Center" Margin="0,40">
+                                                <TextBlock Text="Preview not available" FontSize="13"
+                                                           Foreground="{DynamicResource NexusPreviewPlaceholder}" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding PreviewFileName}" FontSize="11"
+                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
+                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
+                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Content split divider (between Explorer and Terminal) -->
+                        <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource NexusSplitDivider}"
+                                      Name="SplitDivider"
+                                      IsVisible="{Binding LayoutMode, Converter={x:Static vm:IsSplitModeConverter.Instance}}" />
+
+                        <!-- === TERMINAL PANEL === -->
+                        <views:TerminalView Grid.Column="2" Name="TerminalPanel"
+                                            DataContext="{Binding Terminal}" />
+                    </Grid>
+                </Grid>
+
+                <!-- ====================================================== -->
+                <!-- ROW 3: STATUS BAR (simplified, no duplicates)            -->
+                <!-- ====================================================== -->
+                <Border Grid.Row="3" Padding="12,4" 
+                        BorderBrush="{DynamicResource NexusStatusBarBorder}" BorderThickness="0,1,0,0"
+                        Background="{DynamicResource NexusBackground}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <!-- Left: Status text (single source of truth) -->
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding StatusText}"
+                                   VerticalAlignment="Center"
+                                   FontSize="11" Foreground="{DynamicResource NexusStatusBarText}" />
+
+                        <!-- Right: Zoom slider (only visible in icon views) -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding ViewMode, Converter={x:Static vm:IsIconViewModeConverter.Instance}}">
+                            <fluent:SymbolIcon Symbol="Image" FontSize="9"
+                                               Foreground="{DynamicResource NexusStatusBarIcon}" />
+                            <Slider Width="70" Minimum="0" Maximum="100"
+                                    Value="{Binding IconZoomLevel, Mode=TwoWay}"
+                                    VerticalAlignment="Center" Name="IconZoomSlider" />
+                            <fluent:SymbolIcon Symbol="Image" FontSize="13"
+                                               Foreground="{DynamicResource NexusStatusBarIcon}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ============================================================ -->
+        <!-- DELETE CONFIRMATION OVERLAY                                    -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsDeleteConfirmationVisible}" IsHitTestVisible="{Binding IsDeleteConfirmationVisible}">
+            <Border Background="{DynamicResource NexusDialogScrim}" />
+            <Border Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="360" BoxShadow="0 8 24 0 #50000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Confirm Delete" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                    <TextBlock Text="{Binding DeleteConfirmationMessage}" FontSize="13" TextWrapping="Wrap"
+                               Foreground="{DynamicResource NexusDialogText}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelDeleteCommand}"
+                                Classes="navBtn" Padding="16,7" FontSize="13" />
+                        <Button Content="Delete" Command="{Binding ConfirmDeleteCommand}"
+                                Padding="16,7" FontSize="13"
+                                Background="{DynamicResource NexusDangerBackground}" Foreground="White" CornerRadius="5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- TERMINAL CLOSE CONFIRMATION OVERLAY                           -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsTerminalCloseConfirmVisible}" IsHitTestVisible="{Binding IsTerminalCloseConfirmVisible}">
+            <Border Background="{DynamicResource NexusDialogScrim}" />
+            <Border Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="380" BoxShadow="0 8 24 0 #50000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Terminal Process Running" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                    <TextBlock Text="A process is still running in this tab's terminal. Closing the tab will terminate it. Are you sure?"
+                               FontSize="13" TextWrapping="Wrap"
+                               Foreground="{DynamicResource NexusDialogText}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelTerminalCloseCommand}"
+                                Classes="navBtn" Padding="16,7" FontSize="13" />
+                        <Button Content="Close Tab" Command="{Binding ConfirmTerminalCloseCommand}"
+                                Padding="16,7" FontSize="13"
+                                Background="{DynamicResource NexusDangerBackground}" Foreground="White" CornerRadius="5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- CREATE FOLDER/FILE DIALOG OVERLAY                             -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsCreateDialogVisible}" IsHitTestVisible="{Binding IsCreateDialogVisible}">
+            <Border Background="{DynamicResource NexusDialogScrim}" />
+            <Border Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="380" BoxShadow="0 8 24 0 #50000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="{Binding CreateDialogTitle}" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Name:" FontSize="12" Foreground="{DynamicResource NexusDialogLabel}" />
+                        <TextBox Classes="nexusInput" Text="{Binding CreateDialogName, Mode=TwoWay}"
+                                 Name="CreateDialogTextBox"
+                                 AttachedToVisualTree="CreateDialogTextBox_Attached"
+                                 KeyDown="CreateDialogTextBox_KeyDown" />
+                    </StackPanel>
+                    <!-- Error message -->
+                    <TextBlock Text="{Binding CreateDialogError}" FontSize="11"
+                               Foreground="{DynamicResource NexusDangerBackground}" TextWrapping="Wrap"
+                               IsVisible="{Binding CreateDialogError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelCreateCommand}"
+                                Padding="16,7" FontSize="13" />
+                        <Button Content="Create" Command="{Binding ConfirmCreateCommand}"
+                                Padding="16,7" FontSize="13"
+                                Background="{DynamicResource NexusAccent}" Foreground="White" CornerRadius="5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- SIDEBAR GROUP DIALOG (New / Rename Group)                    -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsGroupDialogVisible}" IsHitTestVisible="{Binding IsGroupDialogVisible}">
+            <Border Background="{DynamicResource NexusDialogScrim}" />
+            <Border Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="380" BoxShadow="0 8 24 0 #50000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="{Binding GroupDialogTitle}" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Group name:" FontSize="12" Foreground="{DynamicResource NexusDialogLabel}" />
+                        <TextBox Classes="nexusInput" Text="{Binding GroupDialogName, Mode=TwoWay}"
+                                 Name="GroupDialogTextBox"
+                                 KeyDown="GroupDialogTextBox_KeyDown" />
+                    </StackPanel>
+                    <!-- Error message -->
+                    <TextBlock Text="{Binding GroupDialogError}" FontSize="11"
+                               Foreground="{DynamicResource NexusDangerBackground}" TextWrapping="Wrap"
+                               IsVisible="{Binding GroupDialogError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelGroupDialogCommand}"
+                                Padding="16,7" FontSize="13" />
+                        <Button Content="{Binding GroupDialogConfirmText}" Command="{Binding ConfirmGroupDialogCommand}"
+                                Padding="16,7" FontSize="13"
+                                Background="{DynamicResource NexusAccent}" Foreground="White" CornerRadius="5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- MOVE TO / COPY TO DIALOG (mini folder browser)               -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsMoveToDialogVisible}" IsHitTestVisible="{Binding IsMoveToDialogVisible}">
+            <Border Background="{DynamicResource NexusDialogScrim}" />
+            <Border Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="20"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="450" MaxWidth="550" MinHeight="380" MaxHeight="500"
+                    BoxShadow="0 8 24 0 #50000000">
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                    <!-- Title -->
+                    <TextBlock Grid.Row="0" Text="{Binding MoveToDialogTitle}" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" Margin="0,0,0,12" />
+
+                    <!-- Current path + Up button -->
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="0,0,0,8">
+                        <Button Grid.Column="0" Classes="navBtn" Padding="6,4" Margin="0,0,8,0"
+                                Command="{Binding MoveToGoUpCommand}" ToolTip.Tip="Go Up">
+                            <fluent:SymbolIcon Symbol="ArrowUp" FontSize="12" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                        </Button>
+                        <Border Grid.Column="1" Background="{DynamicResource NexusInputBackground}"
+                                BorderBrush="{DynamicResource NexusInputBorder}" BorderThickness="1"
+                                CornerRadius="6" Padding="8,4">
+                            <TextBlock Text="{Binding MoveToCurrentPath}" FontSize="11.5"
+                                       Foreground="{DynamicResource NexusTextSecondary}"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Folder list -->
+                    <Border Grid.Row="2" Background="{DynamicResource NexusInputBackground}"
+                            BorderBrush="{DynamicResource NexusInputBorder}" BorderThickness="1"
+                            CornerRadius="6" Margin="0,0,0,12">
+                        <ListBox ItemsSource="{Binding MoveToItems}" Background="Transparent"
+                                 BorderThickness="0" DoubleTapped="MoveTo_FolderDoubleTapped"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,3">
+                                        <fluent:SymbolIcon Symbol="Folder" FontSize="16" Foreground="#4A9FDE" IconVariant="Filled" />
+                                        <TextBlock Text="{Binding Name}" FontSize="12.5"
+                                                   Foreground="{DynamicResource NexusText}"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+
+                    <!-- Buttons -->
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelMoveToCommand}"
+                                Padding="16,7" FontSize="13" />
+                        <Button Content="{Binding MoveToDialogTitle}" Command="{Binding ConfirmMoveToCommand}"
+                                Padding="16,7" FontSize="13"
+                                Background="{DynamicResource NexusAccent}" Foreground="White" CornerRadius="5" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- OPERATION PROGRESS OVERLAY                                    -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsOperationInProgress}" IsHitTestVisible="{Binding IsOperationInProgress}">
+            <Border Background="{DynamicResource NexusProgressBackground}" CornerRadius="10" Padding="20"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="24" MinWidth="340" BoxShadow="0 6 20 0 #40000000">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{Binding OperationTitle}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <ProgressBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                     Value="{Binding OperationProgress}" Minimum="0" Maximum="100"
+                                     Height="6" Margin="0,0,0,8"
+                                     Foreground="{DynamicResource NexusProgressForeground}"
+                                     Background="{DynamicResource NexusProgressTrack}" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding OperationStatusText}"
+                                   FontSize="12" Foreground="{DynamicResource NexusTextSecondary}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding OperationProgress, StringFormat='{}{0:F0}%'}"
+                                   FontSize="12" Foreground="{DynamicResource NexusText}" Margin="12,0,0,0" />
+                    </Grid>
+                    <TextBlock Text="{Binding OperationSpeedText}" FontSize="11"
+                               Foreground="{DynamicResource NexusTextTertiary}" />
+                    <Button Content="Cancel" Command="{Binding CancelOperationCommand}"
+                            Classes="navBtn" Padding="14,5" FontSize="12" HorizontalAlignment="Right" />
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- CONFLICT RESOLUTION OVERLAY                                   -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsConflictResolutionVisible}" IsHitTestVisible="{Binding IsConflictResolutionVisible}">
+            <Border Background="{DynamicResource NexusDialogScrim}" />
+            <Border Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="420" BoxShadow="0 8 24 0 #50000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="File Conflict" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                    <TextBlock Text="{Binding ConflictMessage}" FontSize="13" TextWrapping="Wrap"
+                               Foreground="{DynamicResource NexusDialogText}" />
+                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" Margin="0,8">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Source:" FontWeight="SemiBold" Margin="0,0,8,4" FontSize="12"
+                                   Foreground="{DynamicResource NexusText}" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ConflictSourceInfo}" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource NexusTextSecondary}" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Destination:" FontWeight="SemiBold" Margin="0,0,8,0" FontSize="12"
+                                   Foreground="{DynamicResource NexusText}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ConflictDestinationInfo}" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource NexusTextSecondary}" />
+                    </Grid>
+                    <CheckBox Content="Apply to all remaining conflicts"
+                              IsChecked="{Binding ApplyConflictToAll, Mode=TwoWay}"
+                              FontSize="12" Foreground="{DynamicResource NexusDialogLabel}" Margin="0,4,0,0" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Skip" Command="{Binding ResolveConflictCommand}" CommandParameter="Skip"
+                                Classes="navBtn" Padding="14,6" FontSize="13" />
+                        <Button Content="Replace" Command="{Binding ResolveConflictCommand}" CommandParameter="Replace"
+                                Padding="14,6" FontSize="13" Background="{DynamicResource NexusAccent}" Foreground="White" CornerRadius="5" />
+                        <Button Content="Keep Both" Command="{Binding ResolveConflictCommand}" CommandParameter="RenameAutomatically"
+                                Classes="navBtn" Padding="14,6" FontSize="13" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- FILE OPERATION CENTER (expanded, non-blocking)               -->
+        <!-- ============================================================ -->
+        <Border IsVisible="{Binding IsFileOperationCenterVisible}"
+                Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="16"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="24,0,24,40" MinWidth="380" MaxWidth="460"
+                BoxShadow="0 8 28 0 #50000000">
+            <Grid RowDefinitions="Auto,Auto">
+                <!-- Header -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                    <TextBlock Text="File Operations" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="&#x2013;" FontSize="14" Padding="10,2"
+                            Command="{Binding MinimizeFileOperationCenterCommand}"
+                            Background="Transparent" BorderThickness="0" CornerRadius="6"
+                            Foreground="{DynamicResource NexusTextSecondary}" Cursor="Hand"
+                            ToolTip.Tip="Minimize" />
+                </Grid>
+
+                <!-- Operations list -->
+                <ScrollViewer Grid.Row="1" MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Operations}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="0,10" BorderBrush="{DynamicResource NexusBorderSubtle}" BorderThickness="0,0,0,1">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <fluent:SymbolIcon Grid.Column="0"
+                                                           Symbol="{Binding OperationType, Converter={x:Static vm:FileOperationTypeToIconConverter.Instance}}"
+                                                           FontSize="20" Foreground="{DynamicResource NexusAccent}"
+                                                           VerticalAlignment="Top" Margin="0,2,12,0" />
+                                        <StackPanel Grid.Column="1" Spacing="3" Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource NexusText}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding StatusText}" FontSize="11"
+                                                       Foreground="{DynamicResource NexusTextSecondary}" TextTrimming="CharacterEllipsis" />
+                                            <ProgressBar Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100"
+                                                         Height="5" Margin="0,4,0,0"
+                                                         Foreground="{DynamicResource NexusProgressForeground}"
+                                                         Background="{DynamicResource NexusProgressTrack}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <TextBlock Text="{Binding ProgressText}" FontSize="10"
+                                                           Foreground="{DynamicResource NexusTextTertiary}" />
+                                                <TextBlock Text="{Binding SpeedText}" FontSize="10"
+                                                           Foreground="{DynamicResource NexusTextTertiary}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Vertical" Spacing="4" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0:F0}%'}"
+                                                       FontSize="12" Foreground="{DynamicResource NexusText}" HorizontalAlignment="Right" />
+                                            <Button Content="Cancel" Command="{Binding CancelCommand}"
+                                                    Padding="8,2" FontSize="11" HorizontalAlignment="Right"
+                                                    Background="Transparent" BorderThickness="0" CornerRadius="5"
+                                                    Foreground="{DynamicResource NexusDanger}" Cursor="Hand" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- ============================================================ -->
+        <!-- OPERATION INDICATOR (minimized state) lives in the toolbar    -->
+        <!-- ============================================================ -->
+
+        <!-- ============================================================ -->
+        <!-- CLOSE CONFIRMATION OVERLAY (active operations)               -->
+        <!-- ============================================================ -->
+        <Panel IsVisible="{Binding IsCloseConfirmationVisible}" IsHitTestVisible="{Binding IsCloseConfirmationVisible}">
+            <Border Background="{DynamicResource NexusDialogScrim}" />
+            <Border Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="440" BoxShadow="0 8 24 0 #50000000">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Operation in progress" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                    <TextBlock Text="{Binding CloseConfirmationMessage}" FontSize="13" TextWrapping="Wrap"
+                               Foreground="{DynamicResource NexusDialogText}" />
+                    <StackPanel Spacing="8">
+                        <Button Content="Continue using Nexus" Command="{Binding ContinueUsingCommand}"
+                                Classes="navBtn" Padding="12,7" FontSize="13"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Content="Wait for operation to finish" Command="{Binding WaitForOperationCommand}"
+                                Classes="navBtn" Padding="12,7" FontSize="13"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <Button Content="Cancel operation and exit" Command="{Binding CancelAndExitCommand}"
+                                Padding="12,7" FontSize="13"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                Background="{DynamicResource NexusDangerBackground}" Foreground="White" CornerRadius="5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ============================================================ -->
+        <!-- DRAG PREVIEW OVERLAY (follows cursor during drag)             -->
+        <!-- ============================================================ -->
+        <controls:DragPreviewControl Name="DragPreview"
+                                     HorizontalAlignment="Left"
+                                     VerticalAlignment="Top"
+                                     ZIndex="9999" />
+
+    </Panel>
+</Window>

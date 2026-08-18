@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NexusExplorer.App/NexusExplorer.App.csproj" />
+    <Project Path="src/NexusExplorer.Core/NexusExplorer.Core.csproj" />
+    <Project Path="src/NexusExplorer.Infrastructure/NexusExplorer.Infrastructure.csproj" />
+    <Project Path="src/NexusExplorer.Platform/NexusExplorer.Platform.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NexusExplorer.Tests/NexusExplorer.Tests.csproj" />
+  </Folder>
+</Solution>

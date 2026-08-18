@@ -1,0 +1,234 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusExplorer.App.ViewModels"
+             xmlns:models="using:NexusExplorer.Core.Models"
+             xmlns:controls="using:NexusExplorer.App.Controls"
+             x:Class="NexusExplorer.App.Views.FileIconView"
+             x:DataType="vm:MainWindowViewModel">
+
+    <UserControl.Styles>
+        <!-- ListBoxItem: remove default selection chrome, use custom -->
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSelectionHover}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ListBoxItem:selected:focus /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSelectionFocused}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+    </UserControl.Styles>
+
+    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+             SelectionMode="Multiple" Background="Transparent" BorderThickness="0"
+             DoubleTapped="FileList_DoubleTapped" SelectionChanged="FileList_SelectionChanged"
+             Name="FileListBox"
+             AutomationProperties.Name="File list - icon view"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+             ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+        <!-- WrapPanel for icon grid layout. For large directories (1000+ items),
+             performance is managed via async thumbnail loading with cancellation
+             and deferred icon rendering in FileIconControl. -->
+        <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" Margin="10,8" />
+            </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+
+        <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="models:FileSystemItem">
+                <Panel>
+                    <!-- Group Header (full width, forces new line in WrapPanel) -->
+                    <Border IsVisible="{Binding IsGroupHeader}"
+                            Margin="0,14,0,6" BorderBrush="{DynamicResource NexusGroupHeaderBorder}"
+                            BorderThickness="0,0,0,1" Padding="4,0,0,6"
+                            MinWidth="10000">
+                        <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold"
+                                   FontSize="13" Foreground="{DynamicResource NexusGroupHeaderText}" />
+                    </Border>
+
+                    <!-- File/Folder Item -->
+                    <Border IsVisible="{Binding !IsGroupHeader}"
+                            Width="{Binding $parent[UserControl].DataContext.ComputedItemWidth}"
+                            Padding="4,8,4,6"
+                            Background="Transparent"
+                            ToolTip.Tip="{Binding Name}"
+                            PointerPressed="Item_PointerPressed">
+                        <Border.ContextMenu>
+                            <ContextMenu x:CompileBindings="False">
+                                <!-- Navigation group -->
+                                <MenuItem Header="Open" Command="{Binding $parent[UserControl].DataContext.OpenItemCommand}" CommandParameter="{Binding}" />
+                                <MenuItem Header="Open With..." Command="{Binding $parent[UserControl].DataContext.OpenWithCommand}" CommandParameter="{Binding}"
+                                          IsVisible="{Binding Type, Converter={x:Static vm:IsFileConverter.Instance}}" />
+                                <MenuItem Header="Open in New Tab" Command="{Binding $parent[UserControl].DataContext.OpenInNewTabCommand}" CommandParameter="{Binding}"
+                                          IsVisible="{Binding Type, Converter={x:Static vm:IsNavigableConverter.Instance}}" />
+                                <MenuItem Header="Open in Terminal" Command="{Binding $parent[UserControl].DataContext.OpenInTerminalCommand}" CommandParameter="{Binding}"
+                                          IsVisible="{Binding Type, Converter={x:Static vm:IsNavigableConverter.Instance}}" />
+                                <MenuItem Header="Open with editor" IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
+                                          ItemsSource="{Binding $parent[UserControl].DataContext.InstalledEditors}"
+                                          Tag="{Binding $parent[UserControl].DataContext}">
+                                    <MenuItem.Styles>
+                                        <Style Selector="MenuItem > MenuItem">
+                                            <Setter Property="Header" Value="{Binding Name}" />
+                                            <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.OpenWithEditorCommand}" />
+                                            <Setter Property="CommandParameter" Value="{Binding}" />
+                                            <Setter Property="Icon">
+                                                <Template>
+                                                    <controls:EditorIconControl ExecutablePath="{Binding ExecutablePath}" Width="16" Height="16" />
+                                                </Template>
+                                            </Setter>
+                                        </Style>
+                                    </MenuItem.Styles>
+                                </MenuItem>
+                                <Separator />
+
+                                <!-- Edit group -->
+                                <MenuItem Header="Cut" Command="{Binding $parent[UserControl].DataContext.CutSelectedCommand}" InputGesture="Ctrl+X" />
+                                <MenuItem Header="Copy" Command="{Binding $parent[UserControl].DataContext.CopySelectedCommand}" InputGesture="Ctrl+C" />
+                                <MenuItem Header="Copy Path" Command="{Binding $parent[UserControl].DataContext.CopyPathCommand}" InputGesture="Ctrl+Shift+C" />
+                                <MenuItem Header="Paste" Command="{Binding $parent[UserControl].DataContext.PasteCommand}" InputGesture="Ctrl+V" IsEnabled="{Binding $parent[UserControl].DataContext.HasClipboardContent}" />
+                                <Separator />
+
+                                <!-- File operations group -->
+                                <MenuItem Header="Rename" Command="{Binding $parent[UserControl].DataContext.StartRenameCommand}" InputGesture="F2" />
+                                <MenuItem Header="Duplicate" Command="{Binding $parent[UserControl].DataContext.DuplicateSelectedCommand}" InputGesture="Ctrl+D" />
+                                <MenuItem Header="Delete" Command="{Binding $parent[UserControl].DataContext.DeleteSelectedCommand}" InputGesture="Delete" />
+                                <Separator />
+
+                                <!-- Move / Copy To group -->
+                                <MenuItem Header="Compress" Command="{Binding $parent[UserControl].DataContext.CompressSelectedCommand}" />
+                                <MenuItem Header="Extract Here" Command="{Binding $parent[UserControl].DataContext.ExtractSelectedCommand}"
+                                          IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}" />
+                                <MenuItem Header="Open with WinRAR" Command="{Binding $parent[UserControl].DataContext.OpenWithWinRarCommand}"
+                                          IsVisible="{Binding $parent[UserControl].DataContext.IsWinRarAvailable}" />
+                                <MenuItem Header="Extract here (WinRAR)" Command="{Binding $parent[UserControl].DataContext.ExtractHereWithWinRarCommand}"
+                                          IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}" />
+                                <MenuItem Header="Extract to folder (WinRAR)" Command="{Binding $parent[UserControl].DataContext.ExtractToFolderWithWinRarCommand}"
+                                          IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}" />
+                                <MenuItem Header="Add to archive (WinRAR)" Command="{Binding $parent[UserControl].DataContext.AddToArchiveWithWinRarCommand}"
+                                          IsVisible="{Binding $parent[UserControl].DataContext.IsWinRarAvailable}" />
+                                <Separator />
+                                <MenuItem Header="Move To..." Command="{Binding $parent[UserControl].DataContext.ShowMoveToCommand}" />
+                                <MenuItem Header="Copy To..." Command="{Binding $parent[UserControl].DataContext.ShowCopyToCommand}" />
+                                <Separator />
+
+                                <!-- Properties group -->
+                                <MenuItem Header="Folder Color" IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
+                                          ItemsSource="{Binding $parent[UserControl].DataContext.FolderColorPresets}"
+                                          Tag="{Binding $parent[UserControl].DataContext}">
+                                    <MenuItem.Styles>
+                                        <Style Selector="MenuItem > MenuItem">
+                                            <Setter Property="Header" Value="{Binding Name}" />
+                                            <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.SetFolderColorCommand}" />
+                                            <Setter Property="CommandParameter" Value="{Binding ColorHex}" />
+                                            <Setter Property="Icon">
+                                                <Template>
+                                                    <Ellipse Width="12" Height="12" Fill="{Binding ColorHex}" />
+                                                </Template>
+                                            </Setter>
+                                        </Style>
+                                    </MenuItem.Styles>
+                                </MenuItem>
+                                <MenuItem Header="Remove Folder Color" Command="{Binding $parent[UserControl].DataContext.RemoveFolderColorCommand}"
+                                          IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}" />
+                                <MenuItem Header="Pin to Quick Access" Command="{Binding $parent[UserControl].DataContext.PinToFavoritesCommand}" CommandParameter="{Binding Path}"
+                                          IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}" />
+                                <MenuItem Header="Add to Sidebar Group"
+                                          IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
+                                          ItemsSource="{Binding $parent[UserControl].DataContext.CustomGroups}">
+                                    <MenuItem.ItemTemplate>
+                                        <DataTemplate>
+                                            <MenuItem Header="{Binding Name}" Click="AddToGroupItem_Click" />
+                                        </DataTemplate>
+                                    </MenuItem.ItemTemplate>
+                                </MenuItem>
+                                <MenuItem Header="Show in Explorer" Command="{Binding $parent[UserControl].DataContext.ShowInExplorerCommand}" CommandParameter="{Binding}" />
+                                <MenuItem Header="Properties" Command="{Binding $parent[UserControl].DataContext.ShowPropertiesCommand}" CommandParameter="{Binding}" />
+                            </ContextMenu>
+                        </Border.ContextMenu>
+
+                        <StackPanel HorizontalAlignment="Center" Spacing="3">
+                            <!-- Icon/Thumbnail -->
+                            <controls:FileIconControl Item="{Binding}"
+                                       IconSize="{Binding $parent[UserControl].DataContext.ComputedIconSize}"
+                                       UseThumbnails="{Binding $parent[UserControl].DataContext.ViewMode, Converter={x:Static vm:ViewModeToUseThumbnailsConverter.Instance}}"
+                                       HorizontalAlignment="Center" />
+
+                            <!-- Name (read mode) -->
+                            <TextBlock Text="{Binding Name}"
+                                       FontSize="{Binding $parent[UserControl].DataContext.ComputedFontSize}"
+                                       TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource NexusFileItemText}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,2,0,0">
+                                <TextBlock.IsVisible>
+                                    <MultiBinding Converter="{x:Static vm:InlineRenameTextVisibilityConverter.Instance}">
+                                        <Binding />
+                                        <Binding Path="$parent[UserControl].DataContext.SelectedItem" />
+                                        <Binding Path="$parent[UserControl].DataContext.IsRenaming" />
+                                    </MultiBinding>
+                                </TextBlock.IsVisible>
+                            </TextBlock>
+
+                            <!-- Secondary info (size / type) — visible when ShowItemInfo is ON -->
+                            <TextBlock Text="{Binding Converter={x:Static vm:ItemInfoConverter.Instance}}"
+                                       IsVisible="{Binding DataContext.ShowItemInfo, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource NexusFileItemInfoText}"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+
+                            <!-- Drive usage bar (only for Drive items) -->
+                            <StackPanel IsVisible="{Binding Type, Converter={x:Static vm:IsDriveTypeConverter.Instance}}"
+                                        Spacing="2" HorizontalAlignment="Stretch" Margin="2,2,2,0">
+                                <ProgressBar Value="{Binding UsagePercent}" Minimum="0" Maximum="100"
+                                             Height="4"
+                                             Foreground="{DynamicResource NexusDriveUsageForeground}"
+                                             Background="{DynamicResource NexusDriveUsageBackground}" />
+                                <TextBlock Text="{Binding Converter={x:Static vm:DriveSpaceInfoConverter.Instance}}"
+                                           FontSize="9" Foreground="{DynamicResource NexusDriveUsageText}"
+                                           TextAlignment="Center" HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- Name (rename mode) -->
+                            <TextBox Text="{Binding $parent[UserControl].DataContext.RenameText}"
+                                     Classes="inlineRename"
+                                     VerticalAlignment="Top"
+                                     FontSize="{Binding $parent[UserControl].DataContext.ComputedFontSize}"
+                                     TextWrapping="Wrap"
+                                     HorizontalAlignment="Stretch"
+                                     KeyDown="RenameTextBox_KeyDown" LostFocus="RenameTextBox_LostFocus"
+                                     AttachedToVisualTree="RenameTextBox_AttachedToVisualTree">
+                                <TextBox.IsVisible>
+                                    <MultiBinding Converter="{x:Static vm:InlineRenameVisibilityConverter.Instance}">
+                                        <Binding />
+                                        <Binding Path="$parent[UserControl].DataContext.SelectedItem" />
+                                        <Binding Path="$parent[UserControl].DataContext.IsRenaming" />
+                                    </MultiBinding>
+                                </TextBox.IsVisible>
+                            </TextBox>
+                        </StackPanel>
+                    </Border>
+                </Panel>
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>
+</UserControl>

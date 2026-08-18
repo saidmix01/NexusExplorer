@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NexusExplorer.App.Controls.DragPreviewControl"
+             IsHitTestVisible="False"
+             IsVisible="False"
+             HorizontalAlignment="Left"
+             VerticalAlignment="Top">
+
+    <Border Background="#E8FFFFFF" CornerRadius="8"
+            Padding="8,6" BoxShadow="0 3 12 0 #40000000"
+            Name="PreviewBorder"
+            MinWidth="64" MinHeight="64">
+        <StackPanel HorizontalAlignment="Center" Spacing="4">
+            <!-- Icon / Thumbnail -->
+            <Panel Width="48" Height="48" HorizontalAlignment="Center">
+                <Image Name="ThumbnailImage" Width="48" Height="48"
+                       Stretch="Uniform" IsVisible="False" />
+                <Panel Name="IconPanel" IsVisible="True"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Panel>
+
+            <!-- File name (truncated) -->
+            <TextBlock Name="FileNameText"
+                       FontSize="10" Foreground="#3A3A3A"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       MaxWidth="80" MaxLines="1"
+                       HorizontalAlignment="Center" />
+
+            <!-- Multi-selection badge -->
+            <Border Name="CountBadge" IsVisible="False"
+                    Background="#3B8DD4" CornerRadius="9"
+                    Padding="6,2" HorizontalAlignment="Center"
+                    MinWidth="24">
+                <TextBlock Name="CountText" FontSize="10"
+                           Foreground="White" FontWeight="Bold"
+                           TextAlignment="Center" HorizontalAlignment="Center" />
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

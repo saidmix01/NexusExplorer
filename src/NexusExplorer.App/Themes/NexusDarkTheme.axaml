@@ -1,0 +1,199 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================================ -->
+    <!-- NEXUS EXPLORER — DARK THEME (Modern Dashboard Redesign)       -->
+    <!-- Matte dark surfaces, electric cyan/blue accents,              -->
+    <!-- glassmorphism-ready, neumorphic depth cues.                   -->
+    <!-- ============================================================ -->
+
+    <!-- === Core Backgrounds === -->
+    <SolidColorBrush x:Key="NexusBackground" Color="#1A1D23" />
+    <SolidColorBrush x:Key="NexusSurface" Color="#1E2128" />
+    <SolidColorBrush x:Key="NexusSurfaceSecondary" Color="#242830" />
+    <SolidColorBrush x:Key="NexusSurfaceTertiary" Color="#1C1F25" />
+
+    <!-- === Window Chrome === -->
+    <Color x:Key="NexusChromeGradientStart">#1E2128</Color>
+    <Color x:Key="NexusChromeGradientMid1">#1A1D23</Color>
+    <Color x:Key="NexusChromeGradientMid2">#1C1F26</Color>
+    <Color x:Key="NexusChromeGradientMid3">#1E2128</Color>
+    <Color x:Key="NexusChromeGradientEnd">#181B20</Color>
+
+    <!-- === Title Bar === -->
+    <Color x:Key="NexusTitleBarGradientStart">#22262E</Color>
+    <Color x:Key="NexusTitleBarGradientEnd">#1A1D23</Color>
+
+    <!-- === Tab Bar === -->
+    <SolidColorBrush x:Key="NexusTabBarBackground" Color="#161920" />
+    <SolidColorBrush x:Key="NexusTabBarBorder" Color="#2A2E36" />
+    <!-- Active tab: glassmorphism pill with accent glow -->
+    <SolidColorBrush x:Key="NexusTabActiveBackground" Color="#1C2A3A" />
+    <SolidColorBrush x:Key="NexusTabActiveBorder" Color="#00D4FF" />
+    <!-- Inactive tab: semi-transparent dark pill -->
+    <SolidColorBrush x:Key="NexusTabInactiveBackground" Color="#20242C" />
+    <SolidColorBrush x:Key="NexusTabInactiveBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusTabCloseButton" Color="#6B7280" />
+    <!-- New tab button pill -->
+    <SolidColorBrush x:Key="NexusTabNewBtnBackground" Color="#20242C" />
+    <SolidColorBrush x:Key="NexusTabNewBtnBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusTabNewBtnForeground" Color="#6B7280" />
+
+    <!-- === Toolbar === -->
+    <Color x:Key="NexusToolbarGradientStart">#1E2128</Color>
+    <Color x:Key="NexusToolbarGradientEnd">#1A1D23</Color>
+    <SolidColorBrush x:Key="NexusToolbarBorder" Color="#2A2E36" />
+
+    <!-- === Navigation Buttons (grouped pill panel) === -->
+    <Color x:Key="NexusNavBtnGradientStart">#282D36</Color>
+    <Color x:Key="NexusNavBtnGradientEnd">#22272F</Color>
+    <Color x:Key="NexusNavBtnHoverStart">#323840</Color>
+    <Color x:Key="NexusNavBtnHoverEnd">#2C3139</Color>
+    <Color x:Key="NexusNavBtnPressedStart">#1E2228</Color>
+    <Color x:Key="NexusNavBtnPressedEnd">#1A1E24</Color>
+    <SolidColorBrush x:Key="NexusNavBtnBorder" Color="#353A44" />
+    <SolidColorBrush x:Key="NexusNavBtnForeground" Color="#B8C0CC" />
+    <!-- Nav group container -->
+    <SolidColorBrush x:Key="NexusNavGroupBackground" Color="#1C2028" />
+    <SolidColorBrush x:Key="NexusNavGroupBorder" Color="#2A2E36" />
+
+    <!-- === Segmented Buttons === -->
+    <SolidColorBrush x:Key="NexusSegBtnBorder" Color="#353A44" />
+    <SolidColorBrush x:Key="NexusSegBtnForeground" Color="#9CA3AF" />
+    <SolidColorBrush x:Key="NexusSegBtnHover" Color="#15FFFFFF" />
+    <SolidColorBrush x:Key="NexusSegBtnPressed" Color="#22FFFFFF" />
+
+    <!-- === Sidebar (frosted depth effect) === -->
+    <Color x:Key="NexusSidebarGradientStart">#181C22</Color>
+    <Color x:Key="NexusSidebarGradientEnd">#14171C</Color>
+    <SolidColorBrush x:Key="NexusSidebarBorder" Color="#252930" />
+    <SolidColorBrush x:Key="NexusSidebarHeaderForeground" Color="#6B7280" />
+    <SolidColorBrush x:Key="NexusSidebarItemForeground" Color="#C8CED8" />
+    <SolidColorBrush x:Key="NexusSidebarItemHover" Color="#12FFFFFF" />
+    <!-- Selected item: accent-colored rounded background -->
+    <SolidColorBrush x:Key="NexusSidebarItemSelected" Color="#1A3050" />
+    <SolidColorBrush x:Key="NexusSidebarItemSelectedBorder" Color="#00D4FF" />
+
+    <!-- === Text === -->
+    <SolidColorBrush x:Key="NexusText" Color="#E4E8EE" />
+    <SolidColorBrush x:Key="NexusTextPrimary" Color="#F0F2F5" />
+    <SolidColorBrush x:Key="NexusTextSecondary" Color="#9CA3AF" />
+    <SolidColorBrush x:Key="NexusTextTertiary" Color="#6B7280" />
+    <SolidColorBrush x:Key="NexusTextDisabled" Color="#4B5260" />
+    <SolidColorBrush x:Key="NexusTextPlaceholder" Color="#5B6370" />
+
+    <!-- === Borders === -->
+    <SolidColorBrush x:Key="NexusBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusBorderLight" Color="#22262E" />
+    <SolidColorBrush x:Key="NexusBorderSubtle" Color="#262A32" />
+
+    <!-- === Accent / Selection (Electric Cyan + Blue) === -->
+    <SolidColorBrush x:Key="NexusAccent" Color="#00D4FF" />
+    <SolidColorBrush x:Key="NexusAccentHover" Color="#33DFFF" />
+    <SolidColorBrush x:Key="NexusAccentForeground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="NexusAccentSubtle" Color="#0A2A3A" />
+    <SolidColorBrush x:Key="NexusSelection" Color="#1A2A4A80" />
+    <SolidColorBrush x:Key="NexusSelectionHover" Color="#253050" />
+    <SolidColorBrush x:Key="NexusSelectionFocused" Color="#304060" />
+    <SolidColorBrush x:Key="NexusHover" Color="#0AFFFFFF" />
+    <SolidColorBrush x:Key="NexusFocusBorder" Color="#00D4FF" />
+
+    <!-- === Status Colors === -->
+    <SolidColorBrush x:Key="NexusDanger" Color="#EF4444" />
+    <SolidColorBrush x:Key="NexusDangerBackground" Color="#DC2626" />
+    <SolidColorBrush x:Key="NexusSuccess" Color="#10B981" />
+    <SolidColorBrush x:Key="NexusWarning" Color="#F59E0B" />
+
+    <!-- === Address Bar (unified dark matte) === -->
+    <SolidColorBrush x:Key="NexusAddressBarBackground" Color="#1C2028" />
+    <SolidColorBrush x:Key="NexusAddressBarBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusAddressBarEditBorder" Color="#00D4FF" />
+    <SolidColorBrush x:Key="NexusBreadcrumbForeground" Color="#8B929E" />
+    <SolidColorBrush x:Key="NexusBreadcrumbSeparator" Color="#5B6370" />
+    <SolidColorBrush x:Key="NexusBreadcrumbIcon" Color="#8B929E" />
+    <!-- Current directory: white bold in breadcrumbs -->
+    <SolidColorBrush x:Key="NexusBreadcrumbActiveForeground" Color="#FFFFFF" />
+
+    <!-- === Search Box === -->
+    <SolidColorBrush x:Key="NexusSearchBackground" Color="#1C2028" />
+    <SolidColorBrush x:Key="NexusSearchBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusSearchFocusBorder" Color="#00D4FF" />
+    <SolidColorBrush x:Key="NexusSearchFocusBackground" Color="#222830" />
+    <SolidColorBrush x:Key="NexusSearchIcon" Color="#5B6370" />
+
+    <!-- === File View === -->
+    <SolidColorBrush x:Key="NexusFileViewBackground" Color="#1A1D23" />
+    <SolidColorBrush x:Key="NexusFileItemText" Color="#E4E8EE" />
+    <SolidColorBrush x:Key="NexusFileItemSecondaryText" Color="#6B7280" />
+    <SolidColorBrush x:Key="NexusFileItemInfoText" Color="#5B6370" />
+    <!-- Extension text: dimmed gray for file extensions -->
+    <SolidColorBrush x:Key="NexusFileItemExtensionText" Color="#4B5260" />
+    <SolidColorBrush x:Key="NexusGroupHeaderText" Color="#B8C0CC" />
+    <SolidColorBrush x:Key="NexusGroupHeaderBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusDetailsHeaderBackground" Color="#1C2028" />
+    <SolidColorBrush x:Key="NexusDetailsHeaderBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusDetailsHeaderForeground" Color="#9CA3AF" />
+
+    <!-- === Preview Panel === -->
+    <SolidColorBrush x:Key="NexusPreviewBackground" Color="#181B20" />
+    <SolidColorBrush x:Key="NexusPreviewBorder" Color="#252930" />
+    <SolidColorBrush x:Key="NexusPreviewImageBackground" Color="#1C2028" />
+    <SolidColorBrush x:Key="NexusPreviewTextBackground" Color="#161920" />
+    <SolidColorBrush x:Key="NexusPreviewTextBorder" Color="#252930" />
+    <SolidColorBrush x:Key="NexusPreviewTextForeground" Color="#C8CED8" />
+    <SolidColorBrush x:Key="NexusPreviewFileName" Color="#E4E8EE" />
+    <SolidColorBrush x:Key="NexusPreviewMetadata" Color="#6B7280" />
+    <SolidColorBrush x:Key="NexusPreviewPlaceholder" Color="#5B6370" />
+
+    <!-- === Status Bar (clean, minimal) === -->
+    <Color x:Key="NexusStatusBarGradientStart">#1A1D23</Color>
+    <Color x:Key="NexusStatusBarGradientEnd">#161920</Color>
+    <SolidColorBrush x:Key="NexusStatusBarBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusStatusBarText" Color="#9CA3AF" />
+    <SolidColorBrush x:Key="NexusStatusBarTextSecondary" Color="#6B7280" />
+    <SolidColorBrush x:Key="NexusStatusBarIcon" Color="#5B6370" />
+    <!-- Slider track: very low visibility dark -->
+    <SolidColorBrush x:Key="NexusSliderTrack" Color="#252930" />
+    <SolidColorBrush x:Key="NexusSliderThumb" Color="#9CA3AF" />
+
+    <!-- === Dialogs === -->
+    <SolidColorBrush x:Key="NexusDialogBackground" Color="#1E2128" />
+    <SolidColorBrush x:Key="NexusDialogScrim" Color="#CC000000" />
+    <SolidColorBrush x:Key="NexusDialogText" Color="#C8CED8" />
+    <SolidColorBrush x:Key="NexusDialogLabel" Color="#9CA3AF" />
+
+    <!-- === Progress === -->
+    <SolidColorBrush x:Key="NexusProgressBackground" Color="#1E2128" />
+    <SolidColorBrush x:Key="NexusProgressForeground" Color="#00D4FF" />
+    <SolidColorBrush x:Key="NexusProgressTrack" Color="#252930" />
+
+    <!-- === Mac Button === -->
+    <SolidColorBrush x:Key="NexusMacBtnForeground" Color="#9CA3AF" />
+    <SolidColorBrush x:Key="NexusMacBtnHover" Color="#18FFFFFF" />
+    <SolidColorBrush x:Key="NexusMacBtnPressed" Color="#25FFFFFF" />
+
+    <!-- === Splitter === -->
+    <SolidColorBrush x:Key="NexusSplitDivider" Color="#252930" />
+
+    <!-- === Terminal Container === -->
+    <SolidColorBrush x:Key="NexusTerminalBorder" Color="#2A2E36" />
+
+    <!-- === TextBox / Input === -->
+    <SolidColorBrush x:Key="NexusInputBackground" Color="#1C2028" />
+    <SolidColorBrush x:Key="NexusInputBorder" Color="#2A2E36" />
+    <SolidColorBrush x:Key="NexusInputFocusBorder" Color="#00D4FF" />
+    <SolidColorBrush x:Key="NexusInputHoverBorder" Color="#353A44" />
+
+    <!-- === Rubber Band (Selection Rectangle) === -->
+    <SolidColorBrush x:Key="NexusRubberBandFill" Color="#2200D4FF" />
+    <SolidColorBrush x:Key="NexusRubberBandStroke" Color="#9900D4FF" />
+
+    <!-- === Drive Usage === -->
+    <SolidColorBrush x:Key="NexusDriveUsageForeground" Color="#00D4FF" />
+    <SolidColorBrush x:Key="NexusDriveUsageBackground" Color="#252930" />
+    <SolidColorBrush x:Key="NexusDriveUsageText" Color="#6B7280" />
+
+    <!-- === Layout mode border === -->
+    <SolidColorBrush x:Key="NexusLayoutModeBorder" Color="#2A2E36" />
+
+</ResourceDictionary>

@@ -1,0 +1,12 @@
+<Project>
+
+  <!--
+    Desactiva la telemetría de compilación de Avalonia (AvaloniaStatsTask).
+    Evita el error "Access to the path ...\AvaloniaUI\BuildServices\buildtasks.log is denied"
+    en builds restringidos/sandbox, sin afectar la compilación XAML ni la licencia.
+  -->
+  <PropertyGroup>
+    <UsedAvaloniaProducts></UsedAvaloniaProducts>
+  </PropertyGroup>
+
+</Project>

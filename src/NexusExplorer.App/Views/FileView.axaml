@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusExplorer.App.ViewModels"
+             xmlns:views="using:NexusExplorer.App.Views"
+             x:Class="NexusExplorer.App.Views.FileView"
+             x:DataType="vm:MainWindowViewModel">
+    <Panel>
+        <views:FileDetailsView IsVisible="{Binding ViewMode, Converter={x:Static vm:IsDetailsViewConverter.Instance}}" />
+        <views:FileListView IsVisible="{Binding ViewMode, Converter={x:Static vm:IsListViewConverter.Instance}}" />
+        <views:FileIconView IsVisible="{Binding ViewMode, Converter={x:Static vm:IsIconViewConverter.Instance}}" />
+        
+        <!-- Rubber band selection overlay -->
+        <Canvas Name="SelectionCanvas" IsHitTestVisible="False" ZIndex="100">
+            <Border Name="SelectionRect" 
+                    Background="{DynamicResource NexusRubberBandFill}"
+                    BorderBrush="{DynamicResource NexusRubberBandStroke}"
+                    BorderThickness="1"
+                    CornerRadius="1" IsVisible="False" />
+        </Canvas>
+    </Panel>
+</UserControl>

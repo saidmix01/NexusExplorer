@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>NexusExplorer.App</RootNamespace>
+    <ApplicationIcon>..\..\media\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\media\icon-256.png" Link="Assets\icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.*" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.*" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.*" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.*" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
+    <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="1.1.259" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NexusExplorer.Core\NexusExplorer.Core.csproj" />
+    <ProjectReference Include="..\NexusExplorer.Infrastructure\NexusExplorer.Infrastructure.csproj" />
+    <ProjectReference Include="..\NexusExplorer.Platform\NexusExplorer.Platform.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>NexusExplorer.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.*" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NexusExplorer.Core\NexusExplorer.Core.csproj" />
+    <ProjectReference Include="..\..\src\NexusExplorer.Infrastructure\NexusExplorer.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\NexusExplorer.Platform\NexusExplorer.Platform.csproj" />
+    <ProjectReference Include="..\..\src\NexusExplorer.App\NexusExplorer.App.csproj" />
+  </ItemGroup>
+
+</Project>
