@@ -353,9 +353,8 @@
              corners + drop shadow float over the transparent window background.
              Margin/CornerRadius are flattened to 0 when maximized (code-behind). -->
         <Border Name="ChromeBorder"
-                Margin="10"
-                CornerRadius="14" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
-                BoxShadow="0 12 36 -6 #40000000"
+                Margin="1"
+                CornerRadius="12" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
                 ClipToBounds="True">
             <Panel>
                 <!-- Real blur backdrop (acrylic/mica) -->
@@ -676,6 +675,29 @@
                                         <MenuItem Header="New File" Command="{Binding CreateFileCommand}">
                                             <MenuItem.Icon><fluent:SymbolIcon Symbol="DocumentAdd" /></MenuItem.Icon>
                                         </MenuItem>
+                                        <!-- New (dynamic: shell-discovered templates + built-ins) -->
+                                        <MenuItem Header="New" ItemsSource="{Binding NewMenuItems}"
+                                                  Tag="{Binding}"
+                                                  IsVisible="{Binding HasNewMenuItems}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Add" /></MenuItem.Icon>
+                                            <MenuItem.Styles>
+                                                <Style Selector="MenuItem > MenuItem">
+                                                    <Setter Property="Header" Value="{Binding DisplayName}" />
+                                                    <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.CreateFromNewItemCommand}" />
+                                                    <Setter Property="CommandParameter" Value="{Binding}" />
+                                                    <Setter Property="Icon">
+                                                        <Template>
+                                                            <Panel>
+                                                                <fluent:SymbolIcon Symbol="{Binding FallbackSymbol}" FontSize="14"
+                                                                                   IsVisible="{Binding Icon, Converter={x:Static vm:IsNullConverter.Instance}}" />
+                                                                <Image Source="{Binding Icon}" Width="16" Height="16"
+                                                                       IsVisible="{Binding Icon, Converter={x:Static vm:IsNotNullConverter.Instance}}" />
+                                                            </Panel>
+                                                        </Template>
+                                                    </Setter>
+                                                </Style>
+                                            </MenuItem.Styles>
+                                        </MenuItem>
                                         <Separator />
                                         <MenuItem Header="Show Item Information" Command="{Binding ToggleShowItemInfoCommand}">
                                             <MenuItem.Icon><fluent:SymbolIcon Symbol="Info" /></MenuItem.Icon>
@@ -956,8 +978,16 @@
                           RowDefinitions="*,0,0">
 
                         <!-- === EXPLORER GRID (FileView | PreviewSplitter | Preview) === -->
-                        <Grid Grid.Column="0" Name="ExplorerGrid"
-                              ColumnDefinitions="*,0,0">
+                        <!-- The preview column has a MinWidth so the splitter can't shrink it
+                             small enough for the preview cards to overflow/clip. -->
+                        <Grid Grid.Column="0" Name="ExplorerGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="320" />
+                                <ColumnDefinition Width="0" />
+                                <!-- MinWidth is toggled in code-behind (UpdatePreviewLayout):
+                                     240 when the preview is shown, 0 when hidden. -->
+                                <ColumnDefinition Width="0" />
+                            </Grid.ColumnDefinitions>
 
                             <!-- File content area (floating rounded glass card) -->
                             <Border Grid.Column="0" Background="{DynamicResource NexusGlassSurface}" Padding="0"
@@ -1032,14 +1062,30 @@
                                             <MenuItem.Icon><fluent:SymbolIcon Symbol="Pin" /></MenuItem.Icon>
                                         </MenuItem>
                                         <Separator />
-                                        <MenuItem Header="New">
+                                        <!-- New: Folder + Text Document are always present (built-ins in
+                                             NewMenuItems); shell-discovered types are appended dynamically.
+                                             Falls back to the two static items if discovery is unavailable. -->
+                                        <MenuItem Header="New" ItemsSource="{Binding NewMenuItems}"
+                                                  Tag="{Binding}"
+                                                  IsVisible="{Binding HasNewMenuItems}">
                                             <MenuItem.Icon><fluent:SymbolIcon Symbol="Add" /></MenuItem.Icon>
-                                            <MenuItem Header="Folder" Command="{Binding CreateFolderCommand}">
-                                                <MenuItem.Icon><fluent:SymbolIcon Symbol="FolderAdd" /></MenuItem.Icon>
-                                            </MenuItem>
-                                            <MenuItem Header="Text Document" Command="{Binding CreateFileCommand}">
-                                                <MenuItem.Icon><fluent:SymbolIcon Symbol="DocumentAdd" /></MenuItem.Icon>
-                                            </MenuItem>
+                                            <MenuItem.Styles>
+                                                <Style Selector="MenuItem > MenuItem">
+                                                    <Setter Property="Header" Value="{Binding DisplayName}" />
+                                                    <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.CreateFromNewItemCommand}" />
+                                                    <Setter Property="CommandParameter" Value="{Binding}" />
+                                                    <Setter Property="Icon">
+                                                        <Template>
+                                                            <Panel>
+                                                                <fluent:SymbolIcon Symbol="{Binding FallbackSymbol}" FontSize="14"
+                                                                                   IsVisible="{Binding Icon, Converter={x:Static vm:IsNullConverter.Instance}}" />
+                                                                <Image Source="{Binding Icon}" Width="16" Height="16"
+                                                                       IsVisible="{Binding Icon, Converter={x:Static vm:IsNotNullConverter.Instance}}" />
+                                                            </Panel>
+                                                        </Template>
+                                                    </Setter>
+                                                </Style>
+                                            </MenuItem.Styles>
                                         </MenuItem>
                                     </ContextMenu>
                                 </Border.ContextMenu>
@@ -1087,93 +1133,153 @@
                                     BorderBrush="{DynamicResource NexusGlassBorder}" BorderThickness="1"
                                     CornerRadius="16" ClipToBounds="True"
                                     Name="PreviewPanel" IsVisible="{Binding IsPreviewVisible}">
-                                <DockPanel>
-                                    <!-- Preview header -->
-                                    <Border DockPanel.Dock="Top" Padding="16,12,16,8"
+                                <Grid RowDefinitions="Auto,*">
+                                    <!-- Preview header (always pinned top) -->
+                                    <Border Grid.Row="0" Padding="16,14,16,10"
                                             Background="Transparent">
-                                        <TextBlock Text="Preview" FontSize="12" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource NexusTextSecondary}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <fluent:SymbolIcon Symbol="Eye" FontSize="14"
+                                                               Foreground="{DynamicResource NexusTextSecondary}" />
+                                            <TextBlock Text="Preview" FontSize="12" FontWeight="SemiBold"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource NexusTextSecondary}" />
+                                        </StackPanel>
                                     </Border>
 
-                                    <!-- Preview content -->
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
-                                        <StackPanel Spacing="12">
-                                            <!-- No selection / nothing to preview -->
-                                            <TextBlock IsVisible="{Binding PreviewType, Converter={x:Static vm:IsNoPreviewConverter.Instance}}"
-                                                       Text="Select a file to preview"
-                                                       FontSize="13"
-                                                       Foreground="{DynamicResource NexusPreviewPlaceholder}"
-                                                       HorizontalAlignment="Center" Margin="0,40" />
+                                    <!-- Empty state (nothing selected) — pinned near the top -->
+                                    <StackPanel Grid.Row="1"
+                                                IsVisible="{Binding PreviewType, Converter={x:Static vm:IsNoPreviewConverter.Instance}}"
+                                                Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                Margin="0,56,0,0">
+                                        <fluent:SymbolIcon Symbol="DocumentSearch" FontSize="40"
+                                                           HorizontalAlignment="Center"
+                                                           Foreground="{DynamicResource NexusPreviewPlaceholder}" />
+                                        <TextBlock Text="Select a file to preview"
+                                                   FontSize="13" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource NexusPreviewPlaceholder}" />
+                                    </StackPanel>
 
-                                            <!-- Image preview -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsImagePreviewConverter.Instance}}" Spacing="12">
-                                                <Border Background="{DynamicResource NexusPreviewImageBackground}" CornerRadius="4" Padding="8"
-                                                        HorizontalAlignment="Center">
-                                                    <Image Source="{Binding PreviewImagePath, Converter={x:Static vm:PathToBitmapConverter.Instance}}"
-                                                           MaxHeight="320" Stretch="Uniform" StretchDirection="DownOnly" />
-                                                </Border>
-                                                <StackPanel Spacing="4" Margin="0,4,0,0">
-                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                    <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                    <TextBlock Text="{Binding PreviewLastModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                </StackPanel>
-                                            </StackPanel>
+                                    <!-- Preview content.  HorizontalScrollBarVisibility=Disabled
+                                         is important: it forces the content to the viewport width
+                                         so metadata rows / cards wrap instead of overflowing the card. -->
+                                    <!-- NOTE: the inset is a Margin on the StackPanel, NOT ScrollViewer.Padding.
+                                         ScrollContentPresenter ignores Padding while measuring, so wrapping
+                                         text was measured ~28px too wide and overflowed the card. -->
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  IsVisible="{Binding PreviewType, Converter={x:Static vm:HasSelectionPreviewConverter.Instance}}">
+                                        <StackPanel Spacing="14" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                                    Margin="14,4,14,14">
 
-                                            <!-- Text preview -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsTextPreviewConverter.Instance}}" Spacing="10">
-                                                <StackPanel Spacing="4">
-                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                    <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                </StackPanel>
-                                                <Border Background="{DynamicResource NexusPreviewTextBackground}" CornerRadius="4"
-                                                        BorderBrush="{DynamicResource NexusPreviewTextBorder}" BorderThickness="1" Padding="8" MaxHeight="400">
-                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                                        <TextBlock Text="{Binding PreviewTextContent}" FontFamily="Cascadia Mono,Consolas,monospace" FontSize="11"
-                                                                   Foreground="{DynamicResource NexusPreviewTextForeground}" TextWrapping="NoWrap" />
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </StackPanel>
+                                            <!-- ===== HERO: image thumbnail OR big file/folder icon ===== -->
+                                            <!-- Image hero -->
+                                            <Border IsVisible="{Binding PreviewType, Converter={x:Static vm:IsImagePreviewConverter.Instance}}"
+                                                    Background="{DynamicResource NexusPreviewImageBackground}"
+                                                    CornerRadius="10" Padding="10" MinHeight="140">
+                                                <Image Source="{Binding PreviewImagePath, Converter={x:Static vm:PathToBitmapConverter.Instance}}"
+                                                       MaxHeight="300" Stretch="Uniform" StretchDirection="DownOnly"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
 
-                                            <!-- Folder preview: lists the folder's contents -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsFolderPreviewConverter.Instance}}" Spacing="10">
-                                                <StackPanel Spacing="4">
-                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                </StackPanel>
-                                                <Border Background="{DynamicResource NexusPreviewTextBackground}" CornerRadius="4"
-                                                        BorderBrush="{DynamicResource NexusPreviewTextBorder}" BorderThickness="1" Padding="8" MaxHeight="400">
-                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                                        <TextBlock Text="{Binding PreviewTextContent}" FontSize="12"
-                                                                   Foreground="{DynamicResource NexusPreviewTextForeground}" TextWrapping="NoWrap" />
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </StackPanel>
+                                            <!-- Icon hero (text / folder / unsupported — shown when there's no image).
+                                                 FlatStyle=True uses the modern flat Fluent folder glyph to match the UI. -->
+                                            <Border IsVisible="{Binding PreviewType, Converter={x:Static vm:IsIconPreviewConverter.Instance}}"
+                                                    Background="{DynamicResource NexusPreviewImageBackground}"
+                                                    CornerRadius="10" Padding="10" Height="128">
+                                                <controls:FileIconControl Item="{Binding SelectedItem}" IconSize="64"
+                                                                          UseThumbnails="True" FlatStyle="True"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center" />
+                                            </Border>
 
-                                            <!-- Unsupported -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsUnsupportedPreviewConverter.Instance}}" Spacing="8" HorizontalAlignment="Center" Margin="0,40">
-                                                <TextBlock Text="Preview not available" FontSize="13"
-                                                           Foreground="{DynamicResource NexusPreviewPlaceholder}" HorizontalAlignment="Center" />
-                                                <TextBlock Text="{Binding PreviewFileName}" FontSize="11"
-                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            <!-- ===== Title block (name + type) ===== -->
+                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:HasSelectionPreviewConverter.Instance}}"
+                                                        Spacing="3">
+                                                <TextBlock Text="{Binding PreviewFileName}" FontSize="14" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource NexusPreviewFileName}"
+                                                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" />
-                                                <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
-                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" />
+                                                           Foreground="{DynamicResource NexusTextSecondary}" />
                                             </StackPanel>
+
+                                            <!-- ===== Details card: rich metadata rows ===== -->
+                                            <Border Background="{DynamicResource NexusPreviewBackground}"
+                                                    BorderBrush="{DynamicResource NexusPreviewBorder}" BorderThickness="1"
+                                                    CornerRadius="8" Padding="12,8"
+                                                    HorizontalAlignment="Stretch"
+                                                    IsVisible="{Binding PreviewType, Converter={x:Static vm:HasSelectionPreviewConverter.Instance}}">
+                                                <StackPanel Spacing="0">
+                                                    <!-- Type-specific rows (dimensions, lines, counts…) -->
+                                                    <ItemsControl ItemsSource="{Binding PreviewMetadata}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="models:PreviewMetadataEntry">
+                                                                <Grid ColumnDefinitions="90,*" Margin="0,4">
+                                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="11"
+                                                                               Foreground="{DynamicResource NexusTextTertiary}" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="11"
+                                                                               Foreground="{DynamicResource NexusPreviewMetadata}"
+                                                                               TextWrapping="Wrap" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <!-- Common rows: size / modified / created -->
+                                                    <Grid ColumnDefinitions="90,*" Margin="0,4"
+                                                          IsVisible="{Binding PreviewFileSize, Converter={x:Static vm:IsNotNullConverter.Instance}}">
+                                                        <TextBlock Grid.Column="0" Text="Size" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusTextTertiary}" />
+                                                        <TextBlock Grid.Column="1" FontSize="11"
+                                                                   Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}"
+                                                                   Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="90,*" Margin="0,4"
+                                                          IsVisible="{Binding PreviewLastModified, Converter={x:Static vm:IsNotNullConverter.Instance}}">
+                                                        <TextBlock Grid.Column="0" Text="Modified" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusTextTertiary}" />
+                                                        <TextBlock Grid.Column="1" FontSize="11"
+                                                                   Text="{Binding PreviewLastModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                                   Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="90,*" Margin="0,4"
+                                                          IsVisible="{Binding PreviewCreated, Converter={x:Static vm:IsNotNullConverter.Instance}}">
+                                                        <TextBlock Grid.Column="0" Text="Created" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusTextTertiary}" />
+                                                        <TextBlock Grid.Column="1" FontSize="11"
+                                                                   Text="{Binding PreviewCreated, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                                   Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- ===== Body: text content or folder listing ===== -->
+                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:HasPreviewBodyConverter.Instance}}"
+                                                        Spacing="6">
+                                                <TextBlock Text="Contents" FontSize="11" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource NexusTextTertiary}" />
+                                                <Border Background="{DynamicResource NexusPreviewTextBackground}" CornerRadius="8"
+                                                        BorderBrush="{DynamicResource NexusPreviewTextBorder}" BorderThickness="1"
+                                                        Padding="10" MaxHeight="380" ClipToBounds="True">
+                                                    <!-- Vertical scroll only; wrapping keeps long lines inside the
+                                                         card instead of overflowing to the right. -->
+                                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                                  VerticalScrollBarVisibility="Auto">
+                                                        <TextBlock Text="{Binding PreviewTextContent}"
+                                                                   FontFamily="Cascadia Mono,Consolas,monospace" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusPreviewTextForeground}"
+                                                                   TextWrapping="Wrap" />
+                                                    </ScrollViewer>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <!-- Unsupported note -->
+                                            <TextBlock IsVisible="{Binding PreviewType, Converter={x:Static vm:IsUnsupportedPreviewConverter.Instance}}"
+                                                       Text="No inline preview available for this file type."
+                                                       FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource NexusPreviewPlaceholder}" />
                                         </StackPanel>
                                     </ScrollViewer>
-                                </DockPanel>
+                                </Grid>
                             </Border>
                         </Grid>
 

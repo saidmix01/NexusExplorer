@@ -447,7 +447,8 @@ public sealed class FileOperationService : IFileOperationService
     }
 
     public async Task<(FileOperationResult Result, string? CreatedPath)> CreateFileAsync(
-        string parentDirectory, string fileName, CancellationToken cancellationToken = default)
+        string parentDirectory, string fileName, bool autoResolveConflicts = false,
+        CancellationToken cancellationToken = default)
     {
         return await Task.Run<(FileOperationResult, string?)>(() =>
             {
@@ -457,8 +458,12 @@ public sealed class FileOperationService : IFileOperationService
                         return (FileOperationResult.Failed("File name cannot be empty."), null);
 
                     var path = Path.Combine(parentDirectory, fileName);
-                    if (File.Exists(path))
-                        return (FileOperationResult.Failed($"'{fileName}' already exists."), null);
+                    if (File.Exists(path) || Directory.Exists(path))
+                    {
+                        if (!autoResolveConflicts)
+                            return (FileOperationResult.Failed($"'{fileName}' already exists."), null);
+                        path = GetUniqueCreatePath(parentDirectory, fileName);
+                    }
 
                     File.Create(path).Dispose();
                     return (FileOperationResult.Ok(), path);
@@ -468,6 +473,92 @@ public sealed class FileOperationService : IFileOperationService
                     return (FileOperationResult.Failed(ex.Message), null);
                 }
             }, cancellationToken);
+    }
+
+    public async Task<(FileOperationResult Result, string? CreatedPath)> CreateFromDefinitionAsync(
+        string parentDirectory, NewItemDefinition definition, CancellationToken cancellationToken = default)
+    {
+        return await Task.Run<(FileOperationResult, string?)>(() =>
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(parentDirectory) || !Directory.Exists(parentDirectory))
+                        return (FileOperationResult.Failed("The target folder no longer exists."), null);
+
+                    // Build "New <Base><ext>" and always de-duplicate so the action never fails on a
+                    // name clash (matches the New Folder behavior).
+                    var baseName = string.IsNullOrWhiteSpace(definition.DefaultBaseName)
+                        ? "New File"
+                        : definition.DefaultBaseName;
+                    var ext = NormalizeExtension(definition.Extension);
+                    var fileName = baseName + ext;
+                    var path = GetUniqueCreatePath(parentDirectory, fileName);
+
+                    switch (definition.Kind)
+                    {
+                        case NewItemKind.TemplateFile:
+                            // A real template (e.g. a minimal .docx) is copied verbatim so the new
+                            // file is a valid document of that type. Validate the source first; if it
+                            // vanished since discovery, fall back to an empty file.
+                            if (!string.IsNullOrWhiteSpace(definition.TemplatePath)
+                                && File.Exists(definition.TemplatePath))
+                            {
+                                File.Copy(definition.TemplatePath!, path, overwrite: false);
+                            }
+                            else
+                            {
+                                File.Create(path).Dispose();
+                            }
+                            break;
+
+                        case NewItemKind.DataFile:
+                            if (definition.Data is { Length: > 0 })
+                                File.WriteAllBytes(path, definition.Data);
+                            else
+                                File.Create(path).Dispose();
+                            break;
+
+                        case NewItemKind.EmptyFile:
+                        default:
+                            File.Create(path).Dispose();
+                            break;
+                    }
+
+                    return (FileOperationResult.Ok(), path);
+                }
+                catch (Exception ex)
+                {
+                    return (FileOperationResult.Failed(ex.Message), null);
+                }
+            }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns a non-colliding path for a new file in <paramref name="parentDirectory"/>, using the
+    /// " (2)", " (3)" … convention Nexus already uses for folders.
+    /// </summary>
+    private static string GetUniqueCreatePath(string parentDirectory, string fileName)
+    {
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        var path = Path.Combine(parentDirectory, fileName);
+        var counter = 2;
+
+        while (File.Exists(path) || Directory.Exists(path))
+        {
+            path = Path.Combine(parentDirectory, $"{name} ({counter}){ext}");
+            counter++;
+        }
+
+        return path;
+    }
+
+    /// <summary>Ensures an extension starts with a single leading dot (or is empty).</summary>
+    private static string NormalizeExtension(string? ext)
+    {
+        if (string.IsNullOrWhiteSpace(ext))
+            return string.Empty;
+        return ext.StartsWith('.') ? ext : "." + ext;
     }
 
     // --- Private helpers ---

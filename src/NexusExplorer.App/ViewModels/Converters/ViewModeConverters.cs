@@ -359,3 +359,25 @@ public sealed class IsImageFileConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>
+/// Converts a color hex string to a brush. An empty/null hex (the "Default" folder-color
+/// menu entry) yields a transparent brush so the swatch renders as an empty ring.
+/// </summary>
+public sealed class ColorHexToBrushConverter : IValueConverter
+{
+    public static readonly ColorHexToBrushConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is string hex && !string.IsNullOrWhiteSpace(hex))
+        {
+            try { return new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(hex)); }
+            catch { /* fall through to transparent */ }
+        }
+        return Avalonia.Media.Brushes.Transparent;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

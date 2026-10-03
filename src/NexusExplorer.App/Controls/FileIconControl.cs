@@ -147,7 +147,7 @@ public class FileIconControl : Panel
                 // Flat filled folder glyph (Frame 2 card aesthetic): monochrome, centered.
                 _symbolIcon.Symbol = Symbol.Folder;
                 _symbolIcon.Foreground = new SolidColorBrush(
-                    customColor is not null ? Color.Parse(customColor) : Color.Parse("#64748B"));
+                    customColor is not null ? Color.Parse(customColor) : Color.Parse("#475569"));
                 _symbolIcon.IsVisible = true;
                 return;
             }

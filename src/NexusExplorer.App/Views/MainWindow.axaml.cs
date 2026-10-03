@@ -303,10 +303,12 @@ public partial class MainWindow : Window
         }
         else
         {
-            chrome.Margin = new Thickness(10);
-            chrome.CornerRadius = new CornerRadius(14);
+            // Rounded corners with a 1px gutter (just enough for the rounding to
+            // not reveal the transparent desktop behind the corners).
+            chrome.Margin = new Thickness(1);
+            chrome.CornerRadius = new CornerRadius(12);
             chrome.BorderThickness = new Thickness(1);
-            chrome.BoxShadow = BoxShadows.Parse("0 12 36 -6 #40000000");
+            chrome.BoxShadow = default;
         }
     }
 
@@ -483,13 +485,18 @@ public partial class MainWindow : Window
 
         if (isPreviewVisible)
         {
-            // Use star-based sizing so the GridSplitter works for user resizing
+            // Use star-based sizing so the GridSplitter works for user resizing.
+            // The MinWidth keeps the preview card wide enough that its content
+            // never overflows/clips when the user drags the splitter.
             explorerGrid.ColumnDefinitions[0].Width = new GridLength(3, GridUnitType.Star);
             explorerGrid.ColumnDefinitions[1].Width = new GridLength(5, GridUnitType.Pixel);
             explorerGrid.ColumnDefinitions[2].Width = new GridLength(1, GridUnitType.Star);
+            explorerGrid.ColumnDefinitions[2].MinWidth = 240;
         }
         else
         {
+            // Clear the MinWidth first so the hidden (0-width) column truly collapses.
+            explorerGrid.ColumnDefinitions[2].MinWidth = 0;
             explorerGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
             explorerGrid.ColumnDefinitions[1].Width = new GridLength(0);
             explorerGrid.ColumnDefinitions[2].Width = new GridLength(0);

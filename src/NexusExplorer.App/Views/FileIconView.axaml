@@ -79,28 +79,13 @@
                                 <MenuItem Header="Restore" Command="{Binding $parent[UserControl].DataContext.RestoreSelectedCommand}"
                                           IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowUndo" /></MenuItem.Icon></MenuItem>
                                 <Separator IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}" />
-                                <!-- Navigation group -->
+                            
+                                <!-- ===== 1. OPEN ===== -->
                                 <MenuItem Header="Open" Command="{Binding $parent[UserControl].DataContext.OpenItemCommand}" CommandParameter="{Binding}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Open" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Open With..." Command="{Binding $parent[UserControl].DataContext.OpenWithCommand}" CommandParameter="{Binding}"
                                           IsVisible="{Binding Type, Converter={x:Static vm:IsFileConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Apps" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Open in New Tab" Command="{Binding $parent[UserControl].DataContext.OpenInNewTabCommand}" CommandParameter="{Binding}"
                                           IsVisible="{Binding Type, Converter={x:Static vm:IsNavigableConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="TabAdd" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Open in Terminal" Command="{Binding $parent[UserControl].DataContext.OpenInTerminalCommand}" CommandParameter="{Binding}"
-                                          IsVisible="{Binding Type, Converter={x:Static vm:IsNavigableConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="WindowConsole" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Open in Other Terminal" ItemsSource="{Binding $parent[UserControl].DataContext.AvailableTerminalProfiles}" Tag="{Binding $parent[UserControl].DataContext}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Code" /></MenuItem.Icon>
-                                    <MenuItem.Styles>
-                                        <Style Selector="MenuItem > MenuItem">
-                                            <Setter Property="Header" Value="{Binding Name}" />
-                                            <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.OpenInOtherTerminalCommand}" />
-                                            <Setter Property="CommandParameter" Value="{Binding}" />
-                                            <Setter Property="Icon">
-                                                <Template>
-                                                    <fluent:SymbolIcon Symbol="{Binding IconKey, Converter={x:Static vm:TerminalIconConverter.Instance}}" FontSize="14" />
-                                                </Template>
-                                            </Setter>
-                                        </Style>
-                                    </MenuItem.Styles>
-                                </MenuItem>
                                 <MenuItem Header="Open with editor" IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
                                           ItemsSource="{Binding $parent[UserControl].DataContext.InstalledEditors}"
                                           Tag="{Binding $parent[UserControl].DataContext}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Edit" /></MenuItem.Icon>
@@ -116,6 +101,26 @@
                                             </Setter>
                                         </Style>
                                     </MenuItem.Styles>
+                                </MenuItem>
+                                <!-- Terminal submenu: direct launch + other profiles -->
+                                <MenuItem Header="Terminal" IsVisible="{Binding Type, Converter={x:Static vm:IsNavigableConverter.Instance}}"
+                                          Tag="{Binding $parent[UserControl].DataContext}"><MenuItem.Icon><fluent:SymbolIcon Symbol="WindowConsole" /></MenuItem.Icon>
+                                    <MenuItem Header="Open in Terminal" Command="{Binding $parent[UserControl].DataContext.OpenInTerminalCommand}" CommandParameter="{Binding}"><MenuItem.Icon><fluent:SymbolIcon Symbol="WindowConsole" /></MenuItem.Icon></MenuItem>
+                                    <Separator />
+                                    <MenuItem Header="Open in Other Terminal" Classes="otherTerminal" ItemsSource="{Binding $parent[UserControl].DataContext.AvailableTerminalProfiles}" Tag="{Binding $parent[UserControl].DataContext}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Code" /></MenuItem.Icon>
+                                        <MenuItem.Styles>
+                                            <Style Selector="MenuItem.otherTerminal > MenuItem">
+                                                <Setter Property="Header" Value="{Binding Name}" />
+                                                <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.OpenInOtherTerminalCommand}" />
+                                                <Setter Property="CommandParameter" Value="{Binding}" />
+                                                <Setter Property="Icon">
+                                                    <Template>
+                                                        <fluent:SymbolIcon Symbol="{Binding IconKey, Converter={x:Static vm:TerminalIconConverter.Instance}}" FontSize="14" />
+                                                    </Template>
+                                                </Setter>
+                                            </Style>
+                                        </MenuItem.Styles>
+                                    </MenuItem>
                                 </MenuItem>
                                 <!-- Project run/build commands (visible only when the folder is a detected project) -->
                                 <MenuItem Header="Project" ItemsSource="{Binding $parent[UserControl].DataContext.ContextMenuProjectCommands}"
@@ -135,40 +140,47 @@
                                     </MenuItem.Styles>
                                 </MenuItem>
                                 <Separator />
-
-                                <!-- Edit group -->
+                            
+                                <!-- ===== 2. EDIT / CLIPBOARD ===== -->
                                 <MenuItem Header="Cut" Command="{Binding $parent[UserControl].DataContext.CutSelectedCommand}" InputGesture="Ctrl+X"><MenuItem.Icon><fluent:SymbolIcon Symbol="Cut" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Copy" Command="{Binding $parent[UserControl].DataContext.CopySelectedCommand}" InputGesture="Ctrl+C"><MenuItem.Icon><fluent:SymbolIcon Symbol="Copy" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Copy Path" Command="{Binding $parent[UserControl].DataContext.CopyPathCommand}" InputGesture="Ctrl+Shift+C"><MenuItem.Icon><fluent:SymbolIcon Symbol="Link" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Paste" Command="{Binding $parent[UserControl].DataContext.PasteCommand}" InputGesture="Ctrl+V" IsEnabled="{Binding $parent[UserControl].DataContext.HasClipboardContent}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ClipboardPaste" /></MenuItem.Icon></MenuItem>
                                 <Separator />
-
-                                <!-- File operations group -->
+                            
+                                <!-- ===== 3. FILE MANAGEMENT ===== -->
                                 <MenuItem Header="Rename" Command="{Binding $parent[UserControl].DataContext.StartRenameCommand}" InputGesture="F2"><MenuItem.Icon><fluent:SymbolIcon Symbol="Rename" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Duplicate" Command="{Binding $parent[UserControl].DataContext.DuplicateSelectedCommand}" InputGesture="Ctrl+D"><MenuItem.Icon><fluent:SymbolIcon Symbol="DocumentCopy" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Delete" Command="{Binding $parent[UserControl].DataContext.DeleteSelectedCommand}" InputGesture="Delete"><MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon></MenuItem>
                                 <Separator />
-
-                                <!-- Move / Copy To group -->
-                                <MenuItem Header="Compress" Command="{Binding $parent[UserControl].DataContext.CompressSelectedCommand}"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderZip" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Extract Here" Command="{Binding $parent[UserControl].DataContext.ExtractSelectedCommand}"
-                                          IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ArchiveArrowBack" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Open with WinRAR" Command="{Binding $parent[UserControl].DataContext.OpenWithWinRarCommand}"
-                                          IsVisible="{Binding $parent[UserControl].DataContext.IsWinRarAvailable}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Archive" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Extract here (WinRAR)" Command="{Binding $parent[UserControl].DataContext.ExtractHereWithWinRarCommand}"
-                                          IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ArchiveArrowBack" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Extract to folder (WinRAR)" Command="{Binding $parent[UserControl].DataContext.ExtractToFolderWithWinRarCommand}"
-                                          IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderOpen" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Add to archive (WinRAR)" Command="{Binding $parent[UserControl].DataContext.AddToArchiveWithWinRarCommand}"
-                                          IsVisible="{Binding $parent[UserControl].DataContext.IsWinRarAvailable}"><MenuItem.Icon><fluent:SymbolIcon Symbol="BoxMultiple" /></MenuItem.Icon></MenuItem>
+                            
+                                <!-- ===== 4. TOOLS ===== -->
+                                <!-- Compress / Archive submenu -->
+                                <MenuItem Header="Compress / Archive"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderZip" /></MenuItem.Icon>
+                                    <MenuItem Header="Compress" Command="{Binding $parent[UserControl].DataContext.CompressSelectedCommand}"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderZip" /></MenuItem.Icon></MenuItem>
+                                    <MenuItem Header="Extract Here" Command="{Binding $parent[UserControl].DataContext.ExtractSelectedCommand}"
+                                              IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ArchiveArrowBack" /></MenuItem.Icon></MenuItem>
+                                    <Separator IsVisible="{Binding $parent[UserControl].DataContext.IsWinRarAvailable}" />
+                                    <MenuItem Header="Open with WinRAR" Command="{Binding $parent[UserControl].DataContext.OpenWithWinRarCommand}"
+                                              IsVisible="{Binding $parent[UserControl].DataContext.IsWinRarAvailable}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Archive" /></MenuItem.Icon></MenuItem>
+                                    <MenuItem Header="Extract here (WinRAR)" Command="{Binding $parent[UserControl].DataContext.ExtractHereWithWinRarCommand}"
+                                              IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ArchiveArrowBack" /></MenuItem.Icon></MenuItem>
+                                    <MenuItem Header="Extract to folder (WinRAR)" Command="{Binding $parent[UserControl].DataContext.ExtractToFolderWithWinRarCommand}"
+                                              IsVisible="{Binding Path, Converter={x:Static vm:IsZipFileConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderOpen" /></MenuItem.Icon></MenuItem>
+                                    <MenuItem Header="Add to archive (WinRAR)" Command="{Binding $parent[UserControl].DataContext.AddToArchiveWithWinRarCommand}"
+                                              IsVisible="{Binding $parent[UserControl].DataContext.IsWinRarAvailable}"><MenuItem.Icon><fluent:SymbolIcon Symbol="BoxMultiple" /></MenuItem.Icon></MenuItem>
+                                </MenuItem>
+                                <!-- Move / Copy submenu -->
+                                <MenuItem Header="Move / Copy"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderArrowRight" /></MenuItem.Icon>
+                                    <MenuItem Header="Move To..." Command="{Binding $parent[UserControl].DataContext.ShowMoveToCommand}"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderArrowRight" /></MenuItem.Icon></MenuItem>
+                                    <MenuItem Header="Copy To..." Command="{Binding $parent[UserControl].DataContext.ShowCopyToCommand}"><MenuItem.Icon><fluent:SymbolIcon Symbol="CopyArrowRight" /></MenuItem.Icon></MenuItem>
+                                </MenuItem>
                                 <Separator />
-                                <MenuItem Header="Move To..." Command="{Binding $parent[UserControl].DataContext.ShowMoveToCommand}"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderArrowRight" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Copy To..." Command="{Binding $parent[UserControl].DataContext.ShowCopyToCommand}"><MenuItem.Icon><fluent:SymbolIcon Symbol="CopyArrowRight" /></MenuItem.Icon></MenuItem>
-                                <Separator />
-
-                                <!-- Properties group -->
+                            
+                                <!-- ===== 5. ENVIRONMENT & PROPERTIES ===== -->
+                                <!-- Folder Color submenu (includes Default to clear) -->
                                 <MenuItem Header="Folder Color" IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
-                                          ItemsSource="{Binding $parent[UserControl].DataContext.FolderColorPresets}"
+                                          ItemsSource="{Binding $parent[UserControl].DataContext.FolderColorMenuOptions}"
                                           Tag="{Binding $parent[UserControl].DataContext}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ColorFill" /></MenuItem.Icon>
                                     <MenuItem.Styles>
                                         <Style Selector="MenuItem > MenuItem">
@@ -177,24 +189,26 @@
                                             <Setter Property="CommandParameter" Value="{Binding ColorHex}" />
                                             <Setter Property="Icon">
                                                 <Template>
-                                                    <Ellipse Width="12" Height="12" Fill="{Binding ColorHex}" />
+                                                    <Ellipse Width="12" Height="12"
+                                                             Stroke="{DynamicResource NexusBorder}" StrokeThickness="1"
+                                                             Fill="{Binding ColorHex, Converter={x:Static vm:ColorHexToBrushConverter.Instance}}" />
                                                 </Template>
                                             </Setter>
                                         </Style>
                                     </MenuItem.Styles>
                                 </MenuItem>
-                                <MenuItem Header="Remove Folder Color" Command="{Binding $parent[UserControl].DataContext.RemoveFolderColorCommand}"
-                                          IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="CircleOff" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Pin to Quick Access" Command="{Binding $parent[UserControl].DataContext.PinToFavoritesCommand}" CommandParameter="{Binding Path}"
-                                          IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Pin" /></MenuItem.Icon></MenuItem>
-                                <MenuItem Header="Add to Sidebar Group"
-                                          IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
-                                          ItemsSource="{Binding $parent[UserControl].DataContext.CustomGroups}"><MenuItem.Icon><fluent:SymbolIcon Symbol="GroupList" /></MenuItem.Icon>
-                                    <MenuItem.ItemTemplate>
-                                        <DataTemplate>
-                                            <MenuItem Header="{Binding Name}" Click="AddToGroupItem_Click" />
-                                        </DataTemplate>
-                                    </MenuItem.ItemTemplate>
+                                <!-- Add / Pin submenu -->
+                                <MenuItem Header="Add / Pin" IsVisible="{Binding Type, Converter={x:Static vm:IsDirectoryConverter.Instance}}"
+                                          Tag="{Binding $parent[UserControl].DataContext}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Pin" /></MenuItem.Icon>
+                                    <MenuItem Header="Pin to Quick Access" Command="{Binding $parent[UserControl].DataContext.PinToFavoritesCommand}" CommandParameter="{Binding Path}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Pin" /></MenuItem.Icon></MenuItem>
+                                    <MenuItem Header="Add to Sidebar Group"
+                                              ItemsSource="{Binding $parent[UserControl].DataContext.CustomGroups}"><MenuItem.Icon><fluent:SymbolIcon Symbol="GroupList" /></MenuItem.Icon>
+                                        <MenuItem.ItemTemplate>
+                                            <DataTemplate>
+                                                <MenuItem Header="{Binding Name}" Click="AddToGroupItem_Click" />
+                                            </DataTemplate>
+                                        </MenuItem.ItemTemplate>
+                                    </MenuItem>
                                 </MenuItem>
                                 <MenuItem Header="Show in Explorer" Command="{Binding $parent[UserControl].DataContext.ShowInExplorerCommand}" CommandParameter="{Binding}"><MenuItem.Icon><fluent:SymbolIcon Symbol="FolderLink" /></MenuItem.Icon></MenuItem>
                                 <MenuItem Header="Properties" Command="{Binding $parent[UserControl].DataContext.ShowPropertiesCommand}" CommandParameter="{Binding}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Info" /></MenuItem.Icon></MenuItem>

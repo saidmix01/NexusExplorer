@@ -93,10 +93,9 @@
         </Style>
     </Window.Styles>
 
-    <!-- Rounded glass shell -->
-    <Border CornerRadius="14" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
-            Margin="10" ClipToBounds="True"
-            BoxShadow="0 12 36 -6 #40000000">
+    <!-- Rounded glass shell with a 1px gutter so the corners don't reveal the desktop -->
+    <Border CornerRadius="12" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
+            Margin="1" ClipToBounds="True">
         <Panel>
             <ExperimentalAcrylicBorder IsHitTestVisible="False">
                 <ExperimentalAcrylicBorder.Material>

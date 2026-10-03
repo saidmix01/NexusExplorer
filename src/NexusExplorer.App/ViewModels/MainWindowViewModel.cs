@@ -32,6 +32,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ITerminalLauncher _terminalLauncher;
     private readonly IGlobalHotkeyService _globalHotkeyService;
     private readonly IProjectDetectionService? _projectDetectionService;
+    private readonly IShellNewTemplateService? _shellNewTemplateService;
     private readonly ILogger<MainWindowViewModel> _logger;
 
     private CancellationTokenSource? _loadCts;
@@ -106,6 +107,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private int? _previewImageHeight;
+
+    [ObservableProperty]
+    private DateTime? _previewCreated;
+
+    /// <summary>Rich label/value metadata rows shown in the preview panel.</summary>
+    public ObservableCollection<PreviewMetadataEntry> PreviewMetadata { get; } = [];
 
     [ObservableProperty]
     private bool _hasPreviewError;
@@ -502,6 +509,7 @@ public partial class MainWindowViewModel : ObservableObject
         IGlobalHotkeyService globalHotkeyService,
         IRecycleBinQueryService? recycleBinQuery = null,
         IProjectDetectionService? projectDetectionService = null,
+        IShellNewTemplateService? shellNewTemplateService = null,
         ILogger<MainWindowViewModel>? logger = null)
     {
         StartupTiming.Mark("MainWindowViewModel ctor begin");
@@ -528,6 +536,7 @@ public partial class MainWindowViewModel : ObservableObject
         _terminalLauncher = terminalLauncher;
         _globalHotkeyService = globalHotkeyService;
         _projectDetectionService = projectDetectionService;
+        _shellNewTemplateService = shellNewTemplateService;
         _recycleBinQuery = recycleBinQuery;
         _logger = logger ?? NullLogger<MainWindowViewModel>.Instance;
 
@@ -630,6 +639,11 @@ public partial class MainWindowViewModel : ObservableObject
             // Terminal discovery is non-critical — the submenu just stays empty.
             _logger.LogWarning(ex, "Terminal discovery failed.");
         }
+
+        // Build the dynamic "New" submenu up front (like Send To above) so HasNewMenuItems is
+        // already true before any context menu opens — otherwise the menu evaluates visibility
+        // before the async load finishes and the submenu never shows on first open.
+        await LoadNewMenuItemsAsync();
     }
 
     /// <summary>
@@ -1331,13 +1345,22 @@ public partial class MainWindowViewModel : ObservableObject
 
     // --- Default Explorer registration ---
 
+    /// <summary>
+    /// Replacing Explorer works by writing per-user shell registrations. MSIX virtualizes those
+    /// writes into a private hive that Explorer never reads, so the option is unavailable (and
+    /// hidden) in the Microsoft Store build.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatformGuard("windows")]
+    public bool CanSetDefaultExplorer =>
+        OperatingSystem.IsWindows() && !NexusExplorer.Platform.Windows.PackageInfo.IsPackaged;
+
     public bool IsDefaultExplorer =>
-        OperatingSystem.IsWindows() && NexusExplorer.Platform.Windows.DefaultExplorerService.IsDefault();
+        CanSetDefaultExplorer && NexusExplorer.Platform.Windows.DefaultExplorerService.IsDefault();
 
     [RelayCommand]
     private void SetAsDefaultExplorer()
     {
-        if (!OperatingSystem.IsWindows()) { StatusText = "Only available on Windows"; return; }
+        if (!CanSetDefaultExplorer) { StatusText = "Not available in this version"; return; }
         var success = NexusExplorer.Platform.Windows.DefaultExplorerService.Register();
         StatusText = success
             ? "NexusExplorer is now the default file explorer"
@@ -1348,7 +1371,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void RestoreDefaultExplorer()
     {
-        if (!OperatingSystem.IsWindows()) { StatusText = "Only available on Windows"; return; }
+        if (!CanSetDefaultExplorer) { StatusText = "Not available in this version"; return; }
         var success = NexusExplorer.Platform.Windows.DefaultExplorerService.Unregister();
         StatusText = success
             ? "Windows Explorer restored as default"
@@ -1555,18 +1578,33 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<FolderColorOption> FolderColorPresets { get; } = new();
 
+    /// <summary>
+    /// Folder color menu entries: a "Default" (clears the color) entry followed by the
+    /// preset colors. Lets the "Folder Color ▸" submenu host the reset option inline.
+    /// A Default entry is identified by an empty <see cref="FolderColorOption.ColorHex"/>.
+    /// </summary>
+    public ObservableCollection<FolderColorOption> FolderColorMenuOptions { get; } = new();
+
     private void LoadFolderColorPresets()
     {
         FolderColorPresets.Clear();
+        FolderColorMenuOptions.Clear();
+        FolderColorMenuOptions.Add(new FolderColorOption { Name = "Default", ColorHex = "" });
         var presets = _folderColorService?.GetPresetColors();
         if (presets is null) return;
         foreach (var preset in presets)
+        {
             FolderColorPresets.Add(preset);
+            FolderColorMenuOptions.Add(preset);
+        }
     }
 
     [RelayCommand]
     private void SetFolderColor(string? colorHex)
     {
+        // An empty hex (the "Default" menu entry) clears the custom color.
+        if (string.IsNullOrEmpty(colorHex)) colorHex = null;
+
         // Apply to all selected directories (or the single selected item as a fallback).
         var targets = SelectedItems.Count > 0
             ? SelectedItems.Where(i => i.Type == FileSystemItemType.Directory).ToList()
@@ -2422,6 +2460,133 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(HasContextMenuProjectCommands));
+    }
+
+    // --- "New" submenu (Windows Shell integration) ---
+
+    /// <summary>
+    /// Dynamic entries for the context menu's "New" submenu, discovered from the OS shell (on
+    /// Windows, the registered ShellNew associations) plus Nexus's built-ins. Populated by
+    /// <see cref="LoadNewMenuItemsAsync"/> just before the context menu opens.
+    /// </summary>
+    public ObservableCollection<NewMenuItemViewModel> NewMenuItems { get; } = [];
+
+    /// <summary>True once the "New" submenu has at least one entry to show.</summary>
+    public bool HasNewMenuItems => NewMenuItems.Count > 0;
+
+    private bool _newMenuItemsLoaded;
+
+    /// <summary>
+    /// Loads the "New" submenu entries on demand. The underlying service caches its registry walk,
+    /// so this is cheap on repeat calls; discovery runs off the UI thread and the collection is only
+    /// touched here on the UI thread. Native type icons are resolved lazily afterwards so the menu
+    /// appears immediately. Fails safe: any error leaves whatever was already loaded intact.
+    /// </summary>
+    public async Task LoadNewMenuItemsAsync()
+    {
+        // Build once per session; the service's own cache handles association changes via
+        // InvalidateCache. Re-running on every right-click would needlessly rebuild the icons.
+        if (_newMenuItemsLoaded) return;
+
+        if (_shellNewTemplateService is null)
+        {
+            OnPropertyChanged(nameof(HasNewMenuItems));
+            return;
+        }
+
+        try
+        {
+            var definitions = await _shellNewTemplateService.GetNewItemsAsync();
+
+            NewMenuItems.Clear();
+            foreach (var def in definitions)
+                NewMenuItems.Add(new NewMenuItemViewModel(def));
+
+            _newMenuItemsLoaded = true;
+            OnPropertyChanged(nameof(HasNewMenuItems));
+
+            // Resolve native icons in the background; the UI shows the generic glyph until each
+            // one arrives. Only meaningful on Windows — elsewhere IconSource is null.
+            _ = ResolveNewMenuIconsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not load dynamic New menu items.");
+            OnPropertyChanged(nameof(HasNewMenuItems));
+        }
+    }
+
+    private async Task ResolveNewMenuIconsAsync()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        foreach (var vm in NewMenuItems.ToArray())
+        {
+            if (vm.Definition.IconSource is not string ext || string.IsNullOrEmpty(ext))
+                continue;
+
+            try
+            {
+                var bitmap = await Services.Thumbnails.WindowsShellIconExtractor
+                    .ExtractIconForExtensionAsync(ext, 16);
+                if (bitmap is not null)
+                    vm.Icon = bitmap;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not resolve New menu icon for {Ext}.", ext);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Creates the item described by a "New" menu entry in the current folder, then selects it.
+    /// Folders go through the existing CreateDirectory path; files go through the definition-aware
+    /// creation path (empty file, template copy, or inline data). Undo is recorded exactly like the
+    /// existing New Folder / New File flow.
+    /// </summary>
+    [RelayCommand]
+    private async Task CreateFromNewItemAsync(NewMenuItemViewModel? menuItem)
+    {
+        if (menuItem is null || string.IsNullOrEmpty(CurrentPath)) return;
+
+        var definition = menuItem.Definition;
+
+        if (definition.Kind == NewItemKind.Folder)
+        {
+            var (result, createdPath) = await _fileOpService.CreateDirectoryAsync(
+                CurrentPath, definition.DefaultBaseName);
+            await FinalizeCreationAsync(result, createdPath, isDirectory: true);
+            return;
+        }
+
+        var (fileResult, filePath) = await _fileOpService.CreateFromDefinitionAsync(CurrentPath, definition);
+        await FinalizeCreationAsync(fileResult, filePath, isDirectory: false);
+    }
+
+    /// <summary>
+    /// Shared post-creation handling: records undo, refreshes the folder, selects the new item, or
+    /// surfaces the error in the status bar — mirroring <see cref="ConfirmCreateAsync"/>.
+    /// </summary>
+    private async Task FinalizeCreationAsync(FileOperationResult result, string? createdPath, bool isDirectory)
+    {
+        if (result.Success && createdPath is not null)
+        {
+            var name = Path.GetFileName(createdPath);
+            _historyService.AddOperation(new UndoableOperation
+            {
+                Type = isDirectory ? UndoOperationType.CreateFolder : UndoOperationType.CreateFile,
+                Description = isDirectory ? $"Create folder '{name}'" : $"Create '{name}'",
+                Entries = [new UndoEntry { SourcePath = createdPath, DestinationPath = createdPath, IsDirectory = isDirectory }]
+            });
+            await RefreshCurrentDirectoryAsync();
+            var newItem = Items.FirstOrDefault(i => i.Name == name);
+            if (newItem is not null) SelectedItem = newItem;
+        }
+        else if (result.Error is not null)
+        {
+            StatusText = result.Error;
+        }
     }
 
     /// <summary>
@@ -3470,6 +3635,11 @@ public partial class MainWindowViewModel : ObservableObject
             PreviewFullPath = result.FullPath;
             PreviewImageWidth = result.ImageWidth;
             PreviewImageHeight = result.ImageHeight;
+            PreviewCreated = result.Created;
+
+            PreviewMetadata.Clear();
+            foreach (var entry in result.Metadata)
+                PreviewMetadata.Add(entry);
 
             if (result.ErrorMessage is not null)
             {
@@ -3502,6 +3672,8 @@ public partial class MainWindowViewModel : ObservableObject
         PreviewFullPath = null;
         PreviewImageWidth = null;
         PreviewImageHeight = null;
+        PreviewCreated = null;
+        PreviewMetadata.Clear();
         HasPreviewError = false;
         PreviewErrorMessage = null;
         IsPreviewLoading = false;

@@ -28,7 +28,14 @@ public static class PlatformServiceRegistration
                     services.AddSingleton<IRecycleBinQueryService, UnsupportedRecycleBinQueryService>();
                 services.AddSingleton<ISendToService, WindowsSendToService>();
                 if (OperatingSystem.IsWindows())
+                {
                     services.AddSingleton<IShellMetadataProvider, WindowsShellPropertyProvider>();
+                    services.AddSingleton<IShellNewTemplateService, WindowsShellNewTemplateService>();
+                }
+                else
+                {
+                    services.AddSingleton<IShellNewTemplateService, DefaultShellNewTemplateService>();
+                }
                 break;
             case PlatformKind.Linux:
                 services.AddSingleton<IPlatformService, LinuxPlatformService>();
@@ -39,6 +46,7 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<IRecycleBinService, LinuxRecycleBinService>();
                 services.AddSingleton<IRecycleBinQueryService, UnsupportedRecycleBinQueryService>();
                 services.AddSingleton<ISendToService, DefaultSendToService>();
+                services.AddSingleton<IShellNewTemplateService, DefaultShellNewTemplateService>();
                 break;
             case PlatformKind.MacOS:
                 services.AddSingleton<IPlatformService, MacOSPlatformService>();
@@ -49,6 +57,7 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<IRecycleBinService, MacOSRecycleBinService>();
                 services.AddSingleton<IRecycleBinQueryService, UnsupportedRecycleBinQueryService>();
                 services.AddSingleton<ISendToService, DefaultSendToService>();
+                services.AddSingleton<IShellNewTemplateService, DefaultShellNewTemplateService>();
                 break;
             default:
                 throw new PlatformNotSupportedException(

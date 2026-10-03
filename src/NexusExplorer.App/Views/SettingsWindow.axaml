@@ -103,10 +103,9 @@
         </Style>
     </Window.Styles>
 
-    <!-- Rounded glass shell -->
-    <Border CornerRadius="14" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
-            Margin="10" ClipToBounds="True"
-            BoxShadow="0 12 36 -6 #40000000">
+    <!-- Rounded glass shell with a 1px gutter so the corners don't reveal the desktop -->
+    <Border CornerRadius="12" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
+            Margin="1" ClipToBounds="True">
         <Panel>
             <ExperimentalAcrylicBorder IsHitTestVisible="False">
                 <ExperimentalAcrylicBorder.Material>
@@ -229,19 +228,26 @@
                                         <TextBlock Text="Make folders and drives open in Nexus Explorer when you double-click them, and open Nexus with Win + E. You can restore the built-in Windows Explorer at any time."
                                                    Classes="muted" TextWrapping="Wrap" />
 
-                                        <TextBlock Text="Nexus Explorer is your default file manager."
-                                                   FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource NexusSuccess}"
-                                                   IsVisible="{Binding IsDefaultExplorer}" />
-                                        <TextBlock Text="Nexus Explorer is not the default file manager."
-                                                   Classes="muted" IsVisible="{Binding !IsDefaultExplorer}" />
+                                        <!-- Microsoft Store (MSIX) build: registry-based replacement can't work. -->
+                                        <TextBlock Text="This option isn't available in the Microsoft Store version: Windows doesn't let Store apps replace File Explorer. You can still pin Nexus Explorer to the taskbar or launch it from Run (Win + R) with &quot;nexusexplorer&quot;."
+                                                   Classes="muted" TextWrapping="Wrap"
+                                                   IsVisible="{Binding !CanSetDefaultExplorer}" />
 
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <Button Content="Set as Default Explorer" Command="{Binding SetAsDefaultExplorerCommand}" />
-                                            <Button Content="Restore Windows Explorer" Command="{Binding RestoreDefaultExplorerCommand}" />
+                                        <StackPanel Spacing="12" IsVisible="{Binding CanSetDefaultExplorer}">
+                                            <TextBlock Text="Nexus Explorer is your default file manager."
+                                                       FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource NexusSuccess}"
+                                                       IsVisible="{Binding IsDefaultExplorer}" />
+                                            <TextBlock Text="Nexus Explorer is not the default file manager."
+                                                       Classes="muted" IsVisible="{Binding !IsDefaultExplorer}" />
+
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <Button Content="Set as Default Explorer" Command="{Binding SetAsDefaultExplorerCommand}" />
+                                                <Button Content="Restore Windows Explorer" Command="{Binding RestoreDefaultExplorerCommand}" />
+                                            </StackPanel>
+
+                                            <TextBlock Text="Note: Windows does not allow fully replacing the taskbar's File Explorer button; this covers folder/drive double-click and Win + E."
+                                                       Classes="muted" TextWrapping="Wrap" FontSize="11" />
                                         </StackPanel>
-
-                                        <TextBlock Text="Note: Windows does not allow fully replacing the taskbar's File Explorer button; this covers folder/drive double-click and Win + E."
-                                                   Classes="muted" TextWrapping="Wrap" FontSize="11" />
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
