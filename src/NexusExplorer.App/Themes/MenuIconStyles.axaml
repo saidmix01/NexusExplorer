@@ -1,0 +1,18 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fluent="using:FluentIcons.Avalonia.Fluent">
+
+    <!-- Menu icon tint/size. These need descendant selectors, which are NOT
+         allowed inside a ControlTheme, so they live in a regular Styles file.
+         Local values (e.g. FontSize="14" on terminal icons) still win. -->
+    <Style Selector="MenuItem fluent|SymbolIcon">
+        <Setter Property="FontSize" Value="{DynamicResource NexusMenuIconSize}" />
+        <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+    </Style>
+    <Style Selector="MenuItem PathIcon">
+        <Setter Property="Width" Value="{DynamicResource NexusMenuIconSize}" />
+        <Setter Property="Height" Value="{DynamicResource NexusMenuIconSize}" />
+        <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+    </Style>
+
+</Styles>

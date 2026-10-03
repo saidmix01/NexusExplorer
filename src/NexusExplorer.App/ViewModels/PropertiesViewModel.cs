@@ -21,6 +21,10 @@ public partial class PropertiesViewModel : ObservableObject
     [ObservableProperty]
     private string _title = "Properties";
 
+    /// <summary>Selected section in the properties window: 0=General, 1=Details, 2=Security.</summary>
+    [ObservableProperty]
+    private int _selectedTabIndex;
+
     [ObservableProperty]
     private string _itemName = "";
 

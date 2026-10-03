@@ -7,6 +7,7 @@ public static class VirtualPaths
 {
     public const string ThisPC = "shell:ThisPC";
     public const string Network = "shell:Network";
+    public const string RecycleBin = "shell:RecycleBin";
 
     /// <summary>Prefix for a virtual view that lists all folders assigned a given color.</summary>
     public const string ColorGroupPrefix = "shell:color:";
@@ -38,12 +39,18 @@ public static class VirtualPaths
     public static string GetDisplayName(string path)
     {
         if (IsColorGroup(path))
-            return $"Color {GetColorHex(path)}";
+        {
+            // Show the color's name ("Purple") instead of its hex; fall back to the hex
+            // for non-preset colors.
+            var hex = GetColorHex(path);
+            return Abstractions.FolderColorOption.GetPresetName(hex) ?? $"Color {hex}";
+        }
 
         return path switch
         {
             ThisPC => "This PC",
             Network => "Network",
+            RecycleBin => "Recycle Bin",
             _ => path
         };
     }

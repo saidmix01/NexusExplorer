@@ -5,6 +5,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.VisualTree;
 using NexusExplorer.App.Behaviors;
 using NexusExplorer.App.Controls;
 using NexusExplorer.App.ViewModels;
@@ -58,6 +60,9 @@ public partial class MainWindow : Window
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
         StartupTiming.MarkReady("UI ready");
+
+        // Apply the correct rounded/flat chrome for the current window state.
+        UpdateChromeForWindowState();
 
         // Make the custom title bar draggable
         var titleBar = this.FindControl<Border>("TitleBarArea");
@@ -230,6 +235,22 @@ public partial class MainWindow : Window
             : WindowState.Maximized;
     }
 
+    /// <summary>
+    /// Starts an OS resize drag from one of the custom edge/corner grips. Needed because
+    /// SystemDecorations="None" removes the native resize borders.
+    /// </summary>
+    private void ResizeGrip_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized) return;
+        if (sender is not Border { Tag: string edgeName }) return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        if (System.Enum.TryParse<WindowEdge>(edgeName, out var edge))
+        {
+            BeginResizeDrag(edge, e);
+            e.Handled = true;
+        }
+    }
+
     // ================================================================
     // Session persistence — save on close, restore on load
     // ================================================================
@@ -244,6 +265,7 @@ public partial class MainWindow : Window
                 _lastWasMaximized = true;
             else if (WindowState == WindowState.Normal)
                 _lastWasMaximized = false;
+            UpdateChromeForWindowState();
             CaptureNormalBoundsIfApplicable();
         }
         else if (e.Property == ClientSizeProperty || e.Property == BoundsProperty)
@@ -261,6 +283,31 @@ public partial class MainWindow : Window
         _lastNormalWidth = Bounds.Width;
         _lastNormalHeight = Bounds.Height;
         _lastNormalPosition = Position;
+    }
+
+    /// <summary>
+    /// When maximized, the floating rounded shell must become edge-to-edge: remove the
+    /// outer margin, the rounded corners and the drop shadow. Restored state gets them back.
+    /// </summary>
+    private void UpdateChromeForWindowState()
+    {
+        var chrome = this.FindControl<Border>("ChromeBorder");
+        if (chrome is null) return;
+
+        if (WindowState == WindowState.Maximized)
+        {
+            chrome.Margin = new Thickness(0);
+            chrome.CornerRadius = new CornerRadius(0);
+            chrome.BorderThickness = new Thickness(0);
+            chrome.BoxShadow = default;
+        }
+        else
+        {
+            chrome.Margin = new Thickness(10);
+            chrome.CornerRadius = new CornerRadius(14);
+            chrome.BorderThickness = new Thickness(1);
+            chrome.BoxShadow = BoxShadows.Parse("0 12 36 -6 #40000000");
+        }
     }
 
     private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
@@ -767,7 +814,88 @@ public partial class MainWindow : Window
             {
                 vm.ClearSearchCommand.Execute(null);
             }
+            CollapseSearchBox();
+            e.Handled = true;
         }
+        else if (e.Key == Key.Enter)
+        {
+            // Query is applied live; Enter just dismisses the floating box.
+            CollapseSearchBox();
+            e.Handled = true;
+        }
+    }
+
+    // Time the search popup was last light-dismissed. Clicking the search icon while the popup
+    // is open first light-dismisses it (pointer press outside), then fires Click — without this
+    // guard the click would immediately reopen it.
+    private DateTime _searchPopupClosedAt = DateTime.MinValue;
+
+    /// <summary>Search icon: toggles the floating search input below the icon.</summary>
+    private void SearchToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        var popup = this.FindControl<Avalonia.Controls.Primitives.Popup>("SearchPopup");
+        if (popup is null) return;
+
+        if (popup.IsOpen)
+        {
+            popup.IsOpen = false;
+            return;
+        }
+        if ((DateTime.UtcNow - _searchPopupClosedAt).TotalMilliseconds < 300)
+            return; // this click is the one that just dismissed it
+
+        ExpandSearchBox();
+    }
+
+    private void SearchPopup_Closed(object? sender, EventArgs e)
+    {
+        _searchPopupClosedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Runs the chosen view/layout command and closes the flyout. Commands are invoked
+    /// from code-behind because a Flyout's content popup doesn't inherit the window DataContext,
+    /// so XAML {Binding} commands inside it don't resolve.</summary>
+    private void ViewOption_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control c) return;
+
+        if (DataContext is MainWindowViewModel vm && c.Tag is string tag)
+        {
+            switch (tag)
+            {
+                case "Icons": vm.SetLargeIconsViewCommand.Execute(null); break;
+                case "Details": vm.SetDetailsViewCommand.Execute(null); break;
+                case "Split": vm.SetSplitCommand.Execute(null); break;
+                case "Terminal": vm.SetTerminalOnlyCommand.Execute(null); break;
+            }
+        }
+
+        // Close the flyout
+        var presenter = c.FindAncestorOfType<Avalonia.Controls.FlyoutPresenter>();
+        if (presenter?.Parent is Avalonia.Controls.Primitives.Popup popup)
+            popup.IsOpen = false;
+    }
+
+    private void ExpandSearchBox()
+    {
+        var popup = this.FindControl<Avalonia.Controls.Primitives.Popup>("SearchPopup");
+        var box = this.FindControl<TextBox>("SearchBoxTextBox");
+        if (popup is null || box is null) return;
+
+        popup.IsOpen = true;
+        // Focus after the popup is laid out so the input can take focus.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            box.Focus();
+            box.SelectAll();
+        }, Avalonia.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void CollapseSearchBox()
+    {
+        var popup = this.FindControl<Avalonia.Controls.Primitives.Popup>("SearchPopup");
+        if (popup is not null)
+            popup.IsOpen = false;
     }
 
     private void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
@@ -934,12 +1062,7 @@ public partial class MainWindow : Window
         // Ctrl+F — focus search box
         if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.F)
         {
-            var searchBox = this.FindControl<TextBox>("SearchBoxTextBox");
-            if (searchBox is not null)
-            {
-                searchBox.Focus();
-                searchBox.SelectAll();
-            }
+            ExpandSearchBox();
             e.Handled = true;
             return;
         }

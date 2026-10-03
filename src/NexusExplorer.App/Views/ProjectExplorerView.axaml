@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:NexusExplorer.App.ViewModels"
+             xmlns:projects="using:NexusExplorer.Core.Models.Projects"
+             xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
+             x:Class="NexusExplorer.App.Views.ProjectExplorerView"
+             x:DataType="vm:ProjectExplorerViewModel"
+             Background="{DynamicResource NexusGlassSurface}">
+
+    <UserControl.Styles>
+        <!-- Section header: compact, uppercase, muted — developer-tool feel. -->
+        <Style Selector="TextBlock.projSectionTitle">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <!-- Entry row: subtle hover, hand cursor for actionable entries. -->
+        <Style Selector="Border.projEntry">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.projEntry:pointerover">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+        <!-- ============ NO PROJECT STATE ============ -->
+        <StackPanel IsVisible="{Binding !HasProject}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Spacing="10" Margin="24">
+            <fluent:SymbolIcon Symbol="Folder" FontSize="40"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource NexusTextTertiary}" />
+            <TextBlock Text="No project detected"
+                       FontSize="15" FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource NexusText}" />
+            <TextBlock Text="This folder doesn't look like a Node.js, .NET, Rust, or Python project."
+                       FontSize="12" TextWrapping="Wrap" MaxWidth="320"
+                       TextAlignment="Center"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource NexusTextSecondary}" />
+        </StackPanel>
+
+        <!-- ============ PROJECT STATE ============ -->
+        <ScrollViewer IsVisible="{Binding HasProject}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="18,16">
+            <StackPanel Spacing="14">
+
+                <!-- PROJECT HEADER -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Project.Name}"
+                               FontSize="20" FontWeight="Bold"
+                               Foreground="{DynamicResource NexusText}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Project.PrimaryType, Converter={x:Static vm:ProjectTypeNameConverter.Instance}}"
+                               FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusAccent}" />
+                    <TextBlock Text="{Binding Project.DetectedTechnologies, Converter={x:Static vm:DetectedTechnologiesConverter.Instance}}"
+                               FontSize="11"
+                               Foreground="{DynamicResource NexusTextSecondary}" />
+                    <TextBlock Text="{Binding Project.RootPath}"
+                               FontSize="11"
+                               FontFamily="Cascadia Mono,Consolas,monospace"
+                               Foreground="{DynamicResource NexusTextTertiary}"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <Rectangle Height="1" Fill="{DynamicResource NexusBorderLight}" />
+
+                <!-- SECTIONS -->
+                <ItemsControl ItemsSource="{Binding Sections}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="projects:ProjectSection">
+                            <StackPanel Spacing="2" Margin="0,0,0,10">
+                                <!-- Section header -->
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="2,0,0,4">
+                                    <fluent:SymbolIcon Symbol="{Binding Kind, Converter={x:Static vm:ProjectSectionIconConverter.Instance}}"
+                                                       FontSize="14" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource NexusTextSecondary}" />
+                                    <TextBlock Text="{Binding Title}" Classes="projSectionTitle" />
+                                </StackPanel>
+
+                                <!-- Section entries -->
+                                <ItemsControl ItemsSource="{Binding Entries}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="projects:ProjectEntry">
+                                            <Border Classes="projEntry"
+                                                    DoubleTapped="ProjectEntry_DoubleTapped"
+                                                    Tag="{Binding}">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <fluent:SymbolIcon Symbol="{Binding Kind, Converter={x:Static vm:ProjectEntryIconConverter.Instance}}"
+                                                                       FontSize="15" VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource NexusTextSecondary}" />
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="13" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource NexusText}" />
+                                                    <!-- Command preview (scripts) -->
+                                                    <TextBlock Text="{Binding Command.DisplayCommand}"
+                                                               FontSize="11" VerticalAlignment="Center"
+                                                               FontFamily="Cascadia Mono,Consolas,monospace"
+                                                               Foreground="{DynamicResource NexusTextTertiary}"
+                                                               IsVisible="{Binding Command, Converter={x:Static vm:IsNotNullConverter.Instance}}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Panel>
+</UserControl>

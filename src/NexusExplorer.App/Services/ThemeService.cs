@@ -8,9 +8,12 @@ using NexusExplorer.Core.Models;
 namespace NexusExplorer.App.Services;
 
 /// <summary>
-/// Manages the application theme (Light / Dark / System).
-/// Swaps resource dictionaries at runtime to provide real-time theme switching
-/// without recreating the visual tree.
+/// Manages the application theme. Swaps resource dictionaries at runtime to provide
+/// real-time theme switching without recreating the visual tree.
+///
+/// Four themes are supported (see <see cref="ThemeMode"/>):
+///   RefinedMinimalism, ModernPastel, AdvancedHierarchy, ContextualDark.
+/// Legacy persisted values (Light/Dark/System) are normalized to the closest new theme.
 /// </summary>
 public sealed class ThemeService
 {
@@ -18,26 +21,27 @@ public sealed class ThemeService
     public static ThemeService Instance => _instance ??= new ThemeService();
 
     private ResourceDictionary? _currentThemeDictionary;
-    private ThemeMode _currentMode = ThemeMode.Light;
+    private ThemeMode _currentMode = ThemeMode.RefinedMinimalism;
 
     /// <summary>
-    /// The currently active theme mode.
+    /// The currently active (normalized) theme mode.
     /// </summary>
     public ThemeMode CurrentMode => _currentMode;
 
     /// <summary>
-    /// Whether the current effective theme is dark.
+    /// Whether the current effective theme is a dark theme.
     /// </summary>
-    public bool IsDark => GetEffectiveTheme(_currentMode) == ThemeMode.Dark;
+    public bool IsDark => Normalize(_currentMode) == ThemeMode.ContextualDark;
 
     /// <summary>
-    /// Applies the given theme mode. Swaps resource dictionaries on the Application
+    /// Applies the given theme. Swaps resource dictionaries on the Application
     /// and adjusts the RequestedThemeVariant so FluentTheme built-in controls also adapt.
     /// </summary>
     public void ApplyTheme(ThemeMode mode)
     {
-        _currentMode = mode;
-        var effectiveTheme = GetEffectiveTheme(mode);
+        var theme = Normalize(mode);
+        _currentMode = theme;
+
         var app = Application.Current;
         if (app is null) return;
 
@@ -48,9 +52,7 @@ public sealed class ThemeService
         }
 
         // Load the appropriate resource dictionary
-        var uri = effectiveTheme == ThemeMode.Dark
-            ? new Uri("avares://NexusExplorer.App/Themes/NexusDarkTheme.axaml")
-            : new Uri("avares://NexusExplorer.App/Themes/NexusLightTheme.axaml");
+        var uri = new Uri(GetThemeUri(theme));
 
         _currentThemeDictionary = new ResourceDictionary();
         var loaded = (ResourceDictionary)AvaloniaXamlLoader.Load(uri);
@@ -63,40 +65,64 @@ public sealed class ThemeService
         app.Resources.MergedDictionaries.Add(_currentThemeDictionary);
 
         // Also set the Avalonia theme variant so FluentTheme built-in controls adjust
-        app.RequestedThemeVariant = effectiveTheme == ThemeMode.Dark
+        app.RequestedThemeVariant = theme == ThemeMode.ContextualDark
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
     }
 
     /// <summary>
-    /// Resolves <see cref="ThemeMode.System"/> to the actual effective theme.
+    /// Maps a (normalized) theme to its packaged resource-dictionary URI.
     /// </summary>
-    private static ThemeMode GetEffectiveTheme(ThemeMode mode)
+    private static string GetThemeUri(ThemeMode theme) => theme switch
     {
-        if (mode == ThemeMode.System)
+        ThemeMode.ModernPastel => "avares://NexusExplorer.App/Themes/ModernPastelTheme.axaml",
+        ThemeMode.AdvancedHierarchy => "avares://NexusExplorer.App/Themes/AdvancedHierarchyTheme.axaml",
+        ThemeMode.ContextualDark => "avares://NexusExplorer.App/Themes/ContextualDarkTheme.axaml",
+        _ => "avares://NexusExplorer.App/Themes/RefinedMinimalismTheme.axaml"
+    };
+
+    /// <summary>
+    /// Normalizes any <see cref="ThemeMode"/> (including legacy Light/Dark/System values)
+    /// to one of the four current themes. System resolves to light/dark via OS preference.
+    /// </summary>
+    private static ThemeMode Normalize(ThemeMode mode) => mode switch
+    {
+        ThemeMode.RefinedMinimalism or
+        ThemeMode.ModernPastel or
+        ThemeMode.AdvancedHierarchy or
+        ThemeMode.ContextualDark => mode,
+
+        // Legacy mappings
+        ThemeMode.Light => ThemeMode.RefinedMinimalism,
+        ThemeMode.Dark => ThemeMode.ContextualDark,
+        ThemeMode.System => IsOsDark() ? ThemeMode.ContextualDark : ThemeMode.RefinedMinimalism,
+        _ => ThemeMode.RefinedMinimalism
+    };
+
+    /// <summary>
+    /// Detects whether the OS is currently in dark mode.
+    /// </summary>
+    private static bool IsOsDark()
+    {
+        var app = Application.Current;
+        if (app is not null)
         {
-            // Detect OS dark mode by checking the current app's actual theme variant
-            var app = Application.Current;
-            if (app is not null)
+            try
             {
-                try
+                var platformSettings = app.PlatformSettings;
+                if (platformSettings is not null)
                 {
-                    var platformSettings = app.PlatformSettings;
-                    if (platformSettings is not null)
-                    {
-                        var colorValues = platformSettings.GetColorValues();
-                        // PlatformColorValues.ThemeVariant is a PlatformThemeVariant enum (Dark=1)
-                        if ((int)colorValues.ThemeVariant == 1)
-                            return ThemeMode.Dark;
-                    }
-                }
-                catch
-                {
-                    // Fallback if platform settings not available
+                    var colorValues = platformSettings.GetColorValues();
+                    // PlatformColorValues.ThemeVariant is a PlatformThemeVariant enum (Dark=1)
+                    if ((int)colorValues.ThemeVariant == 1)
+                        return true;
                 }
             }
-            return ThemeMode.Light;
+            catch
+            {
+                // Fallback if platform settings not available
+            }
         }
-        return mode;
+        return false;
     }
 }

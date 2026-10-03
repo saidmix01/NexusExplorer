@@ -48,13 +48,15 @@ public sealed class NavigationNameToIconConverter : IValueConverter
         {
             "home" => Symbol.Home,
             "desktop" => Symbol.Desktop,
-            "documents" => Symbol.DocumentFolder,
+            "documents" => Symbol.Document,
             "downloads" => Symbol.ArrowDownload,
             "pictures" or "images" or "photos" => Symbol.Image,
             "videos" or "movies" => Symbol.Video,
             "music" or "audio" => Symbol.MusicNote2,
-            "this pc" => Symbol.DesktopMac,
-            "network" => Symbol.Globe,
+            "locations" or "location" => Symbol.Location,
+            "this pc" => Symbol.Desktop,
+            "recycle bin" or "trash" => Symbol.Delete,
+            "network" or "networks" => Symbol.Globe,
             _ when name.Contains(":\\") || name.Contains(":/") => Symbol.HardDrive,
             _ => Symbol.Folder
         };
@@ -88,6 +90,7 @@ public sealed class NavigationNameToColorConverter : IValueConverter
             "videos" or "movies" => Color.Parse("#9B59B6"), // Purple
             "music" or "audio" => Color.Parse("#E84A6F"),   // Pink-red
             "this pc" => Color.Parse("#607D8B"),    // Blue-grey
+            "recycle bin" or "trash" => Color.Parse("#78909C"), // Grey
             "network" => Color.Parse("#26A69A"),    // Teal
             _ when name.Contains(":\\") || name.Contains(":/") => Color.Parse("#78909C"), // Grey-blue
             _ => Color.Parse("#5A9FDE")             // Default blue

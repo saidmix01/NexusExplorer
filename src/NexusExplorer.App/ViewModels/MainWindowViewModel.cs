@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NexusExplorer.App.Services;
 using NexusExplorer.Core.Abstractions;
 using NexusExplorer.Core.Models;
+using NexusExplorer.Core.Models.Projects;
 
 namespace NexusExplorer.App.ViewModels;
 
@@ -20,6 +21,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ISearchService _searchService;
     private readonly IOperationHistoryService _historyService;
     private readonly ISendToService _sendToService;
+    private readonly IRecycleBinQueryService? _recycleBinQuery;
     private readonly IFileWatcherService _fileWatcherService;
     private readonly IStatePersistenceService _statePersistence;
     private readonly IFolderColorService _folderColorService;
@@ -29,6 +31,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ITerminalDiscoveryService _terminalDiscovery;
     private readonly ITerminalLauncher _terminalLauncher;
     private readonly IGlobalHotkeyService _globalHotkeyService;
+    private readonly IProjectDetectionService? _projectDetectionService;
     private readonly ILogger<MainWindowViewModel> _logger;
 
     private CancellationTokenSource? _loadCts;
@@ -305,7 +308,24 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private ExplorerViewMode _viewMode = ExplorerViewMode.Details;
 
+    /// <summary>
+    /// Whether the content area shows the normal file listing or the Project Explorer.
+    /// Persisted per tab; the normal file navigation always remains available.
+    /// </summary>
+    [ObservableProperty]
+    private ExplorerContentMode _contentMode = ExplorerContentMode.Files;
+
     private bool _isPermanentDelete;
+    private bool _isEmptyRecycleBin;
+
+    partial void OnCurrentPathChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsRecycleBinView));
+
+        // Keep the Project Explorer in sync when navigating while it is the active content.
+        if (ContentMode == ExplorerContentMode.Project)
+            _ = ProjectExplorer.LoadAsync(value);
+    }
 
     public bool HasClipboardContent => _clipboardService?.HasContent ?? false;
     public int ClipboardCount => _clipboardService?.Count ?? 0;
@@ -332,7 +352,11 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _showItemInfo = false;
 
     [ObservableProperty]
-    private ThemeMode _currentTheme = ThemeMode.Light;
+    private ThemeMode _currentTheme = ThemeMode.RefinedMinimalism;
+
+    /// <summary>Selected section in the Settings window: 0=Appearance, 1=Default Manager, 2=Shortcuts.</summary>
+    [ObservableProperty]
+    private int _settingsTabIndex;
 
     [ObservableProperty]
     private double _iconZoomLevel = 50;
@@ -376,6 +400,26 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ComputedItemWidth));
         OnPropertyChanged(nameof(ComputedFontSize));
     }
+
+    partial void OnContentModeChanged(ExplorerContentMode value)
+    {
+        // Persist on the active tab like the other per-tab view state.
+        if (_tabService?.ActiveTab is { } tab)
+            tab.ContentMode = value;
+
+        if (value == ExplorerContentMode.Project)
+            _ = ProjectExplorer.LoadAsync(CurrentPath);
+        else
+            ProjectExplorer.Clear();
+    }
+
+    /// <summary>Shows the normal file listing. Project detection has no effect on it.</summary>
+    [RelayCommand]
+    private void ShowFilesContent() => ContentMode = ExplorerContentMode.Files;
+
+    /// <summary>Shows the Project Explorer logical view for the current folder.</summary>
+    [RelayCommand]
+    private void ShowProjectContent() => ContentMode = ExplorerContentMode.Project;
 
     private int ComputeIconSize()
     {
@@ -423,6 +467,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     public TerminalViewModel Terminal { get; }
 
+    /// <summary>Project Explorer child view model (logical project view for the active folder).</summary>
+    public ProjectExplorerViewModel ProjectExplorer { get; }
+
     public ObservableCollection<FileSystemItem> Items { get; } = [];
     public ObservableCollection<SidebarGroup> SidebarGroups { get; } = [];
 
@@ -453,6 +500,8 @@ public partial class MainWindowViewModel : ObservableObject
         ITerminalDiscoveryService terminalDiscovery,
         ITerminalLauncher terminalLauncher,
         IGlobalHotkeyService globalHotkeyService,
+        IRecycleBinQueryService? recycleBinQuery = null,
+        IProjectDetectionService? projectDetectionService = null,
         ILogger<MainWindowViewModel>? logger = null)
     {
         StartupTiming.Mark("MainWindowViewModel ctor begin");
@@ -478,7 +527,34 @@ public partial class MainWindowViewModel : ObservableObject
         _terminalDiscovery = terminalDiscovery;
         _terminalLauncher = terminalLauncher;
         _globalHotkeyService = globalHotkeyService;
+        _projectDetectionService = projectDetectionService;
+        _recycleBinQuery = recycleBinQuery;
         _logger = logger ?? NullLogger<MainWindowViewModel>.Instance;
+
+        // Project Explorer: a logical view over the active folder. It reuses this view model's
+        // existing navigation/open pipeline for file mapping instead of duplicating it.
+        // When no detection service is available (e.g. unit tests), fall back to an inert instance.
+        ProjectExplorer = _projectDetectionService is null
+            ? new ProjectExplorerViewModel()
+            : new ProjectExplorerViewModel(
+                _projectDetectionService,
+                openFolderAsync: path =>
+                {
+                    _tabService.ActiveTab.NavigateTo(path);
+                    LoadDirectory(path);
+                    return Task.CompletedTask;
+                },
+                openFileAsync: async path =>
+                {
+                    try
+                    {
+                        await _platformService.OpenWithDefaultAsync(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        StatusText = $"Cannot open file: {ex.Message}";
+                    }
+                });
         _historyService.HistoryChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(CanUndo));
@@ -579,8 +655,10 @@ public partial class MainWindowViewModel : ObservableObject
         _terminalDiscovery = null!;
         _terminalLauncher = null!;
         _globalHotkeyService = null!;
+        _projectDetectionService = null!;
         _logger = NullLogger<MainWindowViewModel>.Instance;
         Terminal = new TerminalViewModel();
+        ProjectExplorer = new ProjectExplorerViewModel();
     }
 
     public bool CanGoBack => _tabService?.ActiveTab?.CanGoBack ?? false;
@@ -603,7 +681,9 @@ public partial class MainWindowViewModel : ObservableObject
                 // Restore preferences
                 IsPreviewVisible = state.Preferences.ShowPreviewPanel;
                 IconZoomLevel = state.Preferences.IconZoomLevel;
-                CurrentTheme = state.Preferences.Theme;
+                // Normalize legacy persisted theme values (Light/Dark/System) onto the
+                // current four-theme set so the Settings selection reflects reality.
+                CurrentTheme = NormalizeTheme(state.Preferences.Theme);
 
                 if (!string.IsNullOrWhiteSpace(state.Preferences.GlobalHotkeyShortcut))
                     GlobalHotkeyShortcut = state.Preferences.GlobalHotkeyShortcut;
@@ -614,9 +694,14 @@ public partial class MainWindowViewModel : ObservableObject
                 {
                     var ts = state.Tabs[i];
                     var path = Directory.Exists(ts.CurrentPath) ? ts.CurrentPath : _platformService.HomePath;
-                    var tab = new TabItem(path, ts.Title, ts.BackStack, ts.ForwardStack)
+                    // Keep the saved title only if the tab reopens at the same location; otherwise
+                    // (virtual paths such as color groups, or a deleted folder) let the tab derive
+                    // its title from the path it actually opens.
+                    var title = string.Equals(path, ts.CurrentPath, StringComparison.OrdinalIgnoreCase) ? ts.Title : null;
+                    var tab = new TabItem(path, title, ts.BackStack, ts.ForwardStack)
                     {
-                        ViewMode = ts.ViewMode,
+                        // List mode was removed from the UI; coerce legacy saves to Details.
+                        ViewMode = ts.ViewMode == ExplorerViewMode.List ? ExplorerViewMode.Details : ts.ViewMode,
                         LayoutMode = ts.LayoutMode,
                         SplitOrientation = ts.SplitOrientation,
                         SplitRatio = ts.SplitRatio,
@@ -1473,8 +1558,9 @@ public partial class MainWindowViewModel : ObservableObject
     private void LoadFolderColorPresets()
     {
         FolderColorPresets.Clear();
-        if (_folderColorService is null) return;
-        foreach (var preset in _folderColorService.GetPresetColors())
+        var presets = _folderColorService?.GetPresetColors();
+        if (presets is null) return;
+        foreach (var preset in presets)
             FolderColorPresets.Add(preset);
     }
 
@@ -1808,6 +1894,21 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task ConfirmDeleteAsync()
     {
         IsDeleteConfirmationVisible = false;
+
+        // Empty-Recycle-Bin reuses this confirmation overlay.
+        if (_isEmptyRecycleBin)
+        {
+            _isEmptyRecycleBin = false;
+            if (_recycleBinQuery is not null)
+            {
+                var ok = await _recycleBinQuery.EmptyAsync();
+                StatusText = ok ? "Recycle Bin emptied." : "Couldn't empty the Recycle Bin.";
+                if (CurrentPath == VirtualPaths.RecycleBin)
+                    LoadDirectory(VirtualPaths.RecycleBin);
+            }
+            return;
+        }
+
         var paths = GetSelectedPaths();
         if (paths.Count == 0) return;
 
@@ -1856,6 +1957,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         IsDeleteConfirmationVisible = false;
         _isPermanentDelete = false;
+        _isEmptyRecycleBin = false;
     }
 
     [RelayCommand]
@@ -1869,6 +1971,44 @@ public partial class MainWindowViewModel : ObservableObject
             ? $"Permanently delete '{Path.GetFileName(paths[0])}'? This cannot be undone."
             : $"Permanently delete {paths.Count} items? This cannot be undone.";
         _isPermanentDelete = true;
+    }
+
+    /// <summary>True when the current view is the Recycle Bin (enables restore/empty actions).</summary>
+    public bool IsRecycleBinView => CurrentPath == VirtualPaths.RecycleBin;
+
+    /// <summary>
+    /// Restores the selected Recycle Bin items to their original locations.
+    /// Each selected item's Path is the original path (set by the loader).
+    /// </summary>
+    [RelayCommand]
+    private async Task RestoreSelectedAsync()
+    {
+        if (_recycleBinQuery is null || CurrentPath != VirtualPaths.RecycleBin) return;
+
+        var paths = GetSelectedPaths();
+        if (paths.Count == 0) return;
+
+        int restored = 0;
+        foreach (var original in paths)
+        {
+            if (await _recycleBinQuery.RestoreAsync(original))
+                restored++;
+        }
+
+        StatusText = restored == 0
+            ? "Nothing was restored."
+            : restored == 1 ? "Restored 1 item." : $"Restored {restored} items.";
+
+        LoadDirectory(VirtualPaths.RecycleBin);
+    }
+
+    /// <summary>Permanently empties the entire Recycle Bin (asks for confirmation via overlay).</summary>
+    [RelayCommand]
+    private void EmptyRecycleBin()
+    {
+        IsDeleteConfirmationVisible = true;
+        DeleteConfirmationMessage = "Permanently empty the Recycle Bin? This cannot be undone.";
+        _isEmptyRecycleBin = true;
     }
 
     [RelayCommand]
@@ -2211,9 +2351,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void SetViewMode(ExplorerViewMode mode)
     {
+        // The List and Tiles toolbar entries were removed; coerce any legacy/List value
+        // to Details so no view ever renders in the removed List mode.
+        if (mode == ExplorerViewMode.List)
+            mode = ExplorerViewMode.Details;
+
         ViewMode = mode;
         if (_tabService?.ActiveTab is not null)
             _tabService.ActiveTab.ViewMode = mode;
+
+        // Selecting a content view (Icons/Details) implies the explorer-only layout:
+        // leave Split/Terminal if we were in it.
+        if (LayoutMode != LayoutMode.ExplorerOnly)
+            _ = SetLayoutModeAsync(LayoutMode.ExplorerOnly);
     }
 
     [RelayCommand]
@@ -2226,6 +2376,77 @@ public partial class MainWindowViewModel : ObservableObject
         if (targetPath is null) return;
 
         await OpenTerminalAtDirectoryAsync(targetPath);
+    }
+
+    // --- Project commands in the context menu (Developer Mode / Nexus Actions entry point) ---
+
+    /// <summary>
+    /// Runnable project commands for the folder the user right-clicked, populated on demand by
+    /// <see cref="LoadProjectCommandsForAsync"/>. Bound to the "Project" submenu in the context menu.
+    /// </summary>
+    public ObservableCollection<ProjectCommand> ContextMenuProjectCommands { get; } = [];
+
+    /// <summary>True when the right-clicked folder exposes runnable project commands.</summary>
+    public bool HasContextMenuProjectCommands => ContextMenuProjectCommands.Count > 0;
+
+    /// <summary>
+    /// Detects the project at the given folder (if any) and refreshes
+    /// <see cref="ContextMenuProjectCommands"/> so the context menu can offer run/build actions.
+    /// Called just before the folder's context menu opens; detection is cached and root-only, so
+    /// it is cheap to call on each right-click. Non-directory items clear the list.
+    /// </summary>
+    public async Task LoadProjectCommandsForAsync(FileSystemItem? item)
+    {
+        ContextMenuProjectCommands.Clear();
+
+        if (_projectDetectionService is null
+            || item is null
+            || item.Type is not (FileSystemItemType.Directory or FileSystemItemType.Drive))
+        {
+            OnPropertyChanged(nameof(HasContextMenuProjectCommands));
+            return;
+        }
+
+        try
+        {
+            var info = await _projectDetectionService.DetectAsync(item.Path);
+            if (info is not null)
+            {
+                foreach (var command in info.Commands)
+                    ContextMenuProjectCommands.Add(command);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not load project commands for {Path}.", item.Path);
+        }
+
+        OnPropertyChanged(nameof(HasContextMenuProjectCommands));
+    }
+
+    /// <summary>
+    /// Runs a project command in the integrated terminal: opens the terminal at the command's
+    /// working directory and submits the command line. This is the first concrete Nexus Actions
+    /// consumer; it reuses the existing terminal pipeline rather than spawning processes directly.
+    /// </summary>
+    [RelayCommand]
+    private async Task RunProjectCommandInTerminalAsync(ProjectCommand? command)
+    {
+        if (command is null) return;
+
+        var workingDir = command.WorkingDirectory;
+        if (string.IsNullOrWhiteSpace(workingDir) || !Directory.Exists(workingDir))
+        {
+            StatusText = "The project folder no longer exists.";
+            return;
+        }
+
+        await OpenTerminalAtDirectoryAsync(workingDir);
+
+        // Submit the command line to the shell (Enter is a trailing carriage return).
+        var line = command.DisplayCommand + "\r";
+        await Terminal.SendInputAsync(line);
+        StatusText = $"Running: {command.DisplayCommand}";
     }
 
     [RelayCommand]
@@ -2390,6 +2611,14 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task OpenItemAsync(FileSystemItem? item)
     {
         if (item is null) return;
+
+        // Recycle Bin entries have no live on-disk path; double-clicking shouldn't try to open
+        // or navigate into them. Offer restore via the context menu instead.
+        if (CurrentPath == VirtualPaths.RecycleBin)
+        {
+            StatusText = "Right-click a recycled item to restore it.";
+            return;
+        }
 
         if (item.Type is FileSystemItemType.Directory or FileSystemItemType.Drive)
         {
@@ -2618,7 +2847,15 @@ public partial class MainWindowViewModel : ObservableObject
         LayoutMode = tab.LayoutMode;
         SplitOrientation = tab.SplitOrientation;
         SplitRatio = tab.SplitRatio;   // uses clamped setter
-        ViewMode = tab.ViewMode;
+        // Coerce the removed List mode to Details for any tab saved before List was dropped.
+        ViewMode = tab.ViewMode == ExplorerViewMode.List ? ExplorerViewMode.Details : tab.ViewMode;
+
+        // Restore the Files/Project content mode for this tab and refresh Project Explorer.
+        ContentMode = tab.ContentMode;
+        if (ContentMode == ExplorerContentMode.Project)
+            _ = ProjectExplorer.LoadAsync(tab.CurrentPath);
+        else
+            ProjectExplorer.Clear();
         
         // Search, Sort, Group state
         SortMode = tab.SortMode;
@@ -2747,6 +2984,10 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 // Virtual view: all folders assigned a specific color, gathered from any location.
                 resultItems = await LoadColorGroupItemsAsync(path, ct);
+            }
+            else if (path == VirtualPaths.RecycleBin)
+            {
+                resultItems = await LoadRecycleBinItemsAsync(ct);
             }
             else
             {
@@ -3104,6 +3345,37 @@ public partial class MainWindowViewModel : ObservableObject
         }, ct);
     }
 
+    /// <summary>
+    /// Builds the item list for the Recycle Bin virtual view by enumerating the system bin.
+    /// Each entry's Path is its original location (used by Restore).
+    /// </summary>
+    private async Task<IEnumerable<FileSystemItem>> LoadRecycleBinItemsAsync(CancellationToken ct)
+    {
+        if (_recycleBinQuery is null || !_recycleBinQuery.IsSupported)
+        {
+            StatusText = "The Recycle Bin isn't available on this system.";
+            return Enumerable.Empty<FileSystemItem>();
+        }
+
+        var entries = await _recycleBinQuery.EnumerateAsync(ct);
+        ct.ThrowIfCancellationRequested();
+
+        var result = new List<FileSystemItem>(entries.Count);
+        foreach (var e in entries)
+        {
+            result.Add(new FileSystemItem
+            {
+                Name = e.Name,
+                Path = e.OriginalPath,
+                Type = e.IsDirectory ? FileSystemItemType.Directory : FileSystemItemType.File,
+                Size = e.Size,
+                LastModified = e.DeletedAt,
+                Extension = e.IsDirectory ? null : Path.GetExtension(e.Name)
+            });
+        }
+        return result;
+    }
+
     private IEnumerable<FileSystemItem> SortItems(IEnumerable<FileSystemItem> items)
     {
         var list = items.ToList();
@@ -3242,7 +3514,7 @@ public partial class MainWindowViewModel : ObservableObject
         // Handle virtual paths
         if (VirtualPaths.IsVirtual(path))
         {
-            Breadcrumbs.Add(new BreadcrumbItem { Name = VirtualPaths.GetDisplayName(path), Path = path, IsLast = true });
+            Breadcrumbs.Add(new BreadcrumbItem { Name = VirtualPaths.GetDisplayName(path), Path = path, IsLast = true, IsFirst = true });
             return;
         }
 
@@ -3260,9 +3532,12 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         segments.Reverse();
-        // Mark the last segment for visual hierarchy
+        // Mark the last segment for visual hierarchy, and the first to drop its leading chevron.
         if (segments.Count > 0)
+        {
             segments[^1].IsLast = true;
+            segments[0].IsFirst = true;
+        }
         foreach (var segment in segments)
             Breadcrumbs.Add(segment);
     }
@@ -3313,6 +3588,13 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Name = "This PC",
             Path = VirtualPaths.ThisPC,
+            Kind = NavigationItemKind.SpecialLocation,
+            Section = NavigationSection.Locations
+        });
+        locations.Items.Add(new NavigationItem
+        {
+            Name = "Recycle Bin",
+            Path = VirtualPaths.RecycleBin,
             Kind = NavigationItemKind.SpecialLocation,
             Section = NavigationSection.Locations
         });
@@ -3376,14 +3658,18 @@ public partial class MainWindowViewModel : ObservableObject
         var group = colorsGroup ?? FindGroup(SidebarGroupIds.Colors);
         if (group is null || _folderColorService is null) return;
 
+        var presets = _folderColorService.GetPresetColors();
+        var allColors = _folderColorService.GetAllColors();
+        if (presets is null || allColors is null) return;
+
         group.Items.Clear();
 
-        var presetsByHex = _folderColorService.GetPresetColors()
+        var presetsByHex = presets
             .GroupBy(p => p.ColorHex, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.OrdinalIgnoreCase);
 
         // Distinct colors in use, ordered by name/hex for a stable list.
-        var usedColors = _folderColorService.GetAllColors().Values
+        var usedColors = allColors.Values
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(hex => presetsByHex.TryGetValue(hex, out var n) ? n : hex, StringComparer.OrdinalIgnoreCase);
 
@@ -3676,19 +3962,47 @@ public partial class MainWindowViewModel : ObservableObject
         ShowItemInfo = !ShowItemInfo;
     }
 
-    [RelayCommand]
-    private void SetThemeLight() => CurrentTheme = ThemeMode.Light;
+    /// <summary>
+    /// Maps any <see cref="ThemeMode"/> (including legacy Light/Dark/System) to one of the
+    /// four current themes, matching the normalization done by <see cref="ThemeService"/>.
+    /// </summary>
+    private static ThemeMode NormalizeTheme(ThemeMode mode) => mode switch
+    {
+        ThemeMode.RefinedMinimalism or
+        ThemeMode.ModernPastel or
+        ThemeMode.AdvancedHierarchy or
+        ThemeMode.ContextualDark => mode,
+        ThemeMode.Dark => ThemeMode.ContextualDark,
+        _ => ThemeMode.RefinedMinimalism
+    };
 
     [RelayCommand]
-    private void SetThemeDark() => CurrentTheme = ThemeMode.Dark;
+    private void SetThemeRefinedMinimalism() => CurrentTheme = ThemeMode.RefinedMinimalism;
 
     [RelayCommand]
-    private void SetThemeSystem() => CurrentTheme = ThemeMode.System;
+    private void SetThemeModernPastel() => CurrentTheme = ThemeMode.ModernPastel;
 
+    [RelayCommand]
+    private void SetThemeAdvancedHierarchy() => CurrentTheme = ThemeMode.AdvancedHierarchy;
+
+    [RelayCommand]
+    private void SetThemeContextualDark() => CurrentTheme = ThemeMode.ContextualDark;
+
+    /// <summary>
+    /// Cycles through the four themes in order (used by the toolbar quick-switch button).
+    /// </summary>
     [RelayCommand]
     private void ToggleTheme()
     {
-        CurrentTheme = CurrentTheme == ThemeMode.Dark ? ThemeMode.Light : ThemeMode.Dark;
+        CurrentTheme = CurrentTheme switch
+        {
+            ThemeMode.RefinedMinimalism => ThemeMode.ModernPastel,
+            ThemeMode.ModernPastel => ThemeMode.AdvancedHierarchy,
+            ThemeMode.AdvancedHierarchy => ThemeMode.ContextualDark,
+            ThemeMode.ContextualDark => ThemeMode.RefinedMinimalism,
+            // Legacy values collapse onto the cycle start
+            _ => ThemeMode.RefinedMinimalism
+        };
     }
 
     // --- Search logic ---

@@ -81,6 +81,12 @@ public sealed class TabItem : INotifyPropertyChanged
     public double SplitRatio { get; set; } = 0.6; // 60% explorer, 40% terminal
     public ExplorerViewMode ViewMode { get; set; } = ExplorerViewMode.Details;
 
+    /// <summary>
+    /// Whether this tab shows the standard file listing or the Project Explorer logical view.
+    /// Persisted per tab like <see cref="ViewMode"/> so switching tabs restores the chosen mode.
+    /// </summary>
+    public ExplorerContentMode ContentMode { get; set; } = ExplorerContentMode.Files;
+
     // --- Search, Sort, and Group state ---
     public FileSortMode SortMode { get; set; } = FileSortMode.Name;
     public SortDirection SortDirection { get; set; } = SortDirection.Ascending;

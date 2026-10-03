@@ -22,6 +22,10 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<ITerminalDiscoveryService, WindowsTerminalDiscoveryService>();
                 services.AddSingleton<IGlobalHotkeyService, WindowsGlobalHotkeyService>();
                 services.AddSingleton<IRecycleBinService, WindowsRecycleBinService>();
+                if (OperatingSystem.IsWindows())
+                    services.AddSingleton<IRecycleBinQueryService, WindowsRecycleBinQueryService>();
+                else
+                    services.AddSingleton<IRecycleBinQueryService, UnsupportedRecycleBinQueryService>();
                 services.AddSingleton<ISendToService, WindowsSendToService>();
                 if (OperatingSystem.IsWindows())
                     services.AddSingleton<IShellMetadataProvider, WindowsShellPropertyProvider>();
@@ -33,6 +37,7 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<ITerminalDiscoveryService, LinuxTerminalDiscoveryService>();
                 services.AddSingleton<IGlobalHotkeyService, LinuxGlobalHotkeyService>();
                 services.AddSingleton<IRecycleBinService, LinuxRecycleBinService>();
+                services.AddSingleton<IRecycleBinQueryService, UnsupportedRecycleBinQueryService>();
                 services.AddSingleton<ISendToService, DefaultSendToService>();
                 break;
             case PlatformKind.MacOS:
@@ -42,6 +47,7 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<ITerminalDiscoveryService, MacOSTerminalDiscoveryService>();
                 services.AddSingleton<IGlobalHotkeyService, MacOSGlobalHotkeyService>();
                 services.AddSingleton<IRecycleBinService, MacOSRecycleBinService>();
+                services.AddSingleton<IRecycleBinQueryService, UnsupportedRecycleBinQueryService>();
                 services.AddSingleton<ISendToService, DefaultSendToService>();
                 break;
             default:

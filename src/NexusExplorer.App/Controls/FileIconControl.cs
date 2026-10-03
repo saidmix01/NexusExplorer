@@ -27,6 +27,13 @@ public class FileIconControl : Panel
     public static readonly StyledProperty<bool> UseThumbnailsProperty =
         AvaloniaProperty.Register<FileIconControl, bool>(nameof(UseThumbnails), false);
 
+    /// <summary>
+    /// When true, folders render as a flat filled Fluent folder glyph (Frame 2 card look)
+    /// instead of the glossy macOS-style vector folder. Used by the icon (grid) view.
+    /// </summary>
+    public static readonly StyledProperty<bool> FlatStyleProperty =
+        AvaloniaProperty.Register<FileIconControl, bool>(nameof(FlatStyle), false);
+
     private readonly SymbolIcon _symbolIcon;
     private readonly Image _thumbnailImage;
     private readonly Image _folderImage;
@@ -79,10 +86,17 @@ public class FileIconControl : Panel
         set => SetValue(UseThumbnailsProperty, value);
     }
 
+    public bool FlatStyle
+    {
+        get => GetValue(FlatStyleProperty);
+        set => SetValue(FlatStyleProperty, value);
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == ItemProperty || change.Property == IconSizeProperty || change.Property == UseThumbnailsProperty)
+        if (change.Property == ItemProperty || change.Property == IconSizeProperty
+            || change.Property == UseThumbnailsProperty || change.Property == FlatStyleProperty)
         {
             UpdateIcon();
         }
@@ -127,6 +141,17 @@ public class FileIconControl : Panel
             // Check for custom folder color
             var folderColorService = App.Services.GetService<IFolderColorService>();
             var customColor = folderColorService?.GetColor(item.Path);
+
+            if (FlatStyle)
+            {
+                // Flat filled folder glyph (Frame 2 card aesthetic): monochrome, centered.
+                _symbolIcon.Symbol = Symbol.Folder;
+                _symbolIcon.Foreground = new SolidColorBrush(
+                    customColor is not null ? Color.Parse(customColor) : Color.Parse("#64748B"));
+                _symbolIcon.IsVisible = true;
+                return;
+            }
+
             _folderImage.Source = customColor is not null
                 ? GetColoredFolderDrawing(IconSize, customColor)
                 : GetFolderDrawing(IconSize);

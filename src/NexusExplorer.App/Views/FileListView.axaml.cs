@@ -132,6 +132,9 @@ public partial class FileListView : UserControl
                     }
                     vm.SelectedItem = item;
                 }
+
+                // Populate project run/build commands before the context menu opens.
+                _ = vm.LoadProjectCommandsForAsync(item);
             }
             return;
         }

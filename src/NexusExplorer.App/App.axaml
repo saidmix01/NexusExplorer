@@ -1,8 +1,20 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="NexusExplorer.App.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Global modern menu ControlThemes (ContextMenu / MenuItem /
+                     Separator / MenuFlyoutPresenter). Driven by Nexus* resources,
+                     so they adapt to every theme automatically. -->
+                <ResourceInclude Source="avares://NexusExplorer.App/Themes/MenuStyles.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://NexusExplorer.App/Themes/MenuIconStyles.axaml" />
     </Application.Styles>
 
     <TrayIcon.Icons>

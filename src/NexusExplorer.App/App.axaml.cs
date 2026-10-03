@@ -44,8 +44,8 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
         StartupTiming.Mark("App XAML loaded");
 
-        // Apply the default Light theme immediately so DynamicResource bindings resolve
-        ThemeService.Instance.ApplyTheme(ThemeMode.Light);
+        // Apply the default theme immediately so DynamicResource bindings resolve
+        ThemeService.Instance.ApplyTheme(ThemeMode.RefinedMinimalism);
         StartupTiming.Mark("Theme applied");
 
         // Wire up global unhandled exception handlers

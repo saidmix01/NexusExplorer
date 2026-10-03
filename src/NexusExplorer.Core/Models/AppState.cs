@@ -62,7 +62,7 @@ public sealed class UserPreferences
     public bool ShowPreviewPanel { get; set; }
     public double IconZoomLevel { get; set; } = 50;
     public List<string> PinnedFavorites { get; set; } = [];
-    public ThemeMode Theme { get; set; } = ThemeMode.Light;
+    public ThemeMode Theme { get; set; } = ThemeMode.RefinedMinimalism;
 
     /// <summary>Whether the "Open Nexus" global hotkey is enabled.</summary>
     public bool GlobalHotkeyEnabled { get; set; } = true;
