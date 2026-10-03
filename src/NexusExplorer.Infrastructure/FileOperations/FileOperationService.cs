@@ -11,8 +11,7 @@ public sealed class FileOperationService : IFileOperationService
 {
     private readonly IRecycleBinService _recycleBin;
     private readonly ILogger<FileOperationService> _logger;
-    private const int BufferSize = 81920; // 80 KB buffer for streaming copies
-    private readonly SemaphoreSlim _operationLock = new(1, 1);
+    private const int BufferSize = 1024 * 1024; // 1 MB buffer — faster large-file throughput
 
     public FileOperationService(IRecycleBinService recycleBin, ILogger<FileOperationService> logger)
     {
@@ -27,55 +26,62 @@ public sealed class FileOperationService : IFileOperationService
         Func<FileConflict, Task<ConflictAction>>? conflictResolver = null,
         CancellationToken cancellationToken = default)
     {
-        await _operationLock.WaitAsync(cancellationToken);
-        try
+        // Operations run concurrently: each works on its own paths and its own Task, so there's
+        // no need to serialize them behind a global lock (that limited the app to one at a time).
+        return await CopyInternalAsync(sourcePaths, destinationDirectory, progress, conflictResolver, cancellationToken);
+    }
+
+    /// <summary>
+    /// Core copy implementation, shared by CopyAsync and MoveAsync's cross-volume path.
+    /// </summary>
+    private Task<FileOperationResult> CopyInternalAsync(
+        IReadOnlyList<string> sourcePaths,
+        string destinationDirectory,
+        IProgress<FileOperationProgress>? progress,
+        Func<FileConflict, Task<ConflictAction>>? conflictResolver,
+        CancellationToken cancellationToken)
+    {
+        return Task.Run(async () =>
         {
-            return await Task.Run(async () =>
+            var totalBytes = CalculateTotalSize(sourcePaths);
+            var state = new CopyState { TotalBytes = totalBytes, TotalItems = sourcePaths.Count };
+
+            foreach (var source in sourcePaths)
             {
-                var totalBytes = CalculateTotalSize(sourcePaths);
-                var state = new CopyState { TotalBytes = totalBytes, TotalItems = sourcePaths.Count };
+                cancellationToken.ThrowIfCancellationRequested();
+                var name = Path.GetFileName(source);
+                var dest = Path.Combine(destinationDirectory, name);
 
-                foreach (var source in sourcePaths)
+                try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var name = Path.GetFileName(source);
-                    var dest = Path.Combine(destinationDirectory, name);
-
-                    try
+                    if (Directory.Exists(source))
                     {
-                        if (Directory.Exists(source))
-                        {
-                            var result = await CopyDirectoryAsync(source, dest, conflictResolver, progress, state, cancellationToken);
-                            if (result is not null) return result;
-                        }
-                        else if (File.Exists(source))
-                        {
-                            var result = await CopyFileAsync(source, dest, conflictResolver, progress, state, cancellationToken);
-                            if (result is not null) return result;
-                        }
+                        var result = await CopyDirectoryAsync(source, dest, conflictResolver, progress, state, cancellationToken);
+                        if (result is not null) return result;
                     }
-                    catch (OperationCanceledException)
+                    else if (File.Exists(source))
                     {
-                        return FileOperationResult.CancelledResult();
+                        var result = await CopyFileAsync(source, dest, conflictResolver, progress, state, cancellationToken);
+                        if (result is not null) return result;
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Copy failed: {Source} -> {Dest}", source, dest);
-                        return FileOperationResult.Failed($"Failed to copy '{name}': {ex.Message}");
-                    }
-
-                    state.ItemsProcessed++;
-                    ReportProgress(progress, FileOperationType.Copy, name, state.ItemsProcessed, state.TotalItems, state.BytesProcessed, state.TotalBytes, state);
+                }
+                catch (OperationCanceledException)
+                {
+                    return FileOperationResult.CancelledResult();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Copy failed: {Source} -> {Dest}", source, dest);
+                    return FileOperationResult.Failed($"Failed to copy '{name}': {ex.Message}");
                 }
 
-                ReportCompleted(progress, FileOperationType.Copy, state.ItemsProcessed);
-                return FileOperationResult.Ok(state.ItemsProcessed);
-            }, cancellationToken);
-        }
-        finally
-        {
-            _operationLock.Release();
-        }
+                state.ItemsProcessed++;
+                ReportProgress(progress, FileOperationType.Copy, name, state.ItemsProcessed, state.TotalItems, state.BytesProcessed, state.TotalBytes, state);
+            }
+
+            ReportCompleted(progress, FileOperationType.Copy, state.ItemsProcessed);
+            return FileOperationResult.Ok(state.ItemsProcessed);
+        }, cancellationToken);
     }
 
     public async Task<FileOperationResult> MoveAsync(
@@ -85,10 +91,7 @@ public sealed class FileOperationService : IFileOperationService
         Func<FileConflict, Task<ConflictAction>>? conflictResolver = null,
         CancellationToken cancellationToken = default)
     {
-        await _operationLock.WaitAsync(cancellationToken);
-        try
-        {
-            return await Task.Run(async () =>
+        return await Task.Run(async () =>
             {
                 var itemsProcessed = 0;
 
@@ -97,6 +100,10 @@ public sealed class FileOperationService : IFileOperationService
                     cancellationToken.ThrowIfCancellationRequested();
                     var name = Path.GetFileName(source);
                     var dest = Path.Combine(destinationDirectory, name);
+
+                    // Holds the temporarily-renamed pre-existing destination so we can
+                    // restore it if the move fails (avoids losing the old file/folder).
+                    string? replacedBackup = null;
 
                     try
                     {
@@ -109,8 +116,11 @@ public sealed class FileOperationService : IFileOperationService
                                 case ConflictAction.Skip: continue;
                                 case ConflictAction.Cancel: return FileOperationResult.CancelledResult();
                                 case ConflictAction.Replace:
-                                    if (File.Exists(dest)) File.Delete(dest);
-                                    else if (Directory.Exists(dest)) Directory.Delete(dest, true);
+                                    // Rename the existing destination aside instead of deleting it
+                                    // outright, so a failed move can be rolled back without data loss.
+                                    replacedBackup = GetUniquePath(dest + ".nexus-replaced");
+                                    if (File.Exists(dest)) File.Move(dest, replacedBackup);
+                                    else if (Directory.Exists(dest)) Directory.Move(dest, replacedBackup);
                                     break;
                                 case ConflictAction.RenameAutomatically:
                                     dest = GetUniquePath(dest);
@@ -122,31 +132,44 @@ public sealed class FileOperationService : IFileOperationService
                             Directory.Move(source, dest);
                         else if (File.Exists(source))
                             File.Move(source, dest);
+
+                        // Move succeeded — the old destination (if any) can be discarded.
+                        DeleteBackup(replacedBackup);
+                        replacedBackup = null;
                     }
                     catch (OperationCanceledException)
                     {
+                        RestoreBackup(replacedBackup, dest);
                         return FileOperationResult.CancelledResult();
                     }
                     catch (IOException) when (IsCrossVolume(source, dest))
                     {
-                        // Cross-volume move: copy then delete
-                        // We must release the lock temporarily because CopyAsync will acquire it
-                        _operationLock.Release();
+                        // Cross-volume move: copy then delete, reusing the shared copy core.
                         try
                         {
-                            var copyResult = await CopyAsync([source], destinationDirectory, progress, conflictResolver, cancellationToken);
-                            if (!copyResult.Success) return copyResult;
+                            var copyResult = await CopyInternalAsync([source], destinationDirectory, progress, conflictResolver, cancellationToken);
+                            if (!copyResult.Success)
+                            {
+                                RestoreBackup(replacedBackup, dest);
+                                return copyResult;
+                            }
 
                             if (Directory.Exists(source)) Directory.Delete(source, true);
                             else if (File.Exists(source)) File.Delete(source);
+
+                            DeleteBackup(replacedBackup);
+                            replacedBackup = null;
                         }
-                        finally
+                        catch (Exception ex)
                         {
-                            await _operationLock.WaitAsync(cancellationToken);
+                            RestoreBackup(replacedBackup, dest);
+                            _logger.LogError(ex, "Cross-volume move failed: {Source} -> {Dest}", source, dest);
+                            return FileOperationResult.Failed($"Failed to move '{name}': {ex.Message}");
                         }
                     }
                     catch (Exception ex)
                     {
+                        RestoreBackup(replacedBackup, dest);
                         _logger.LogError(ex, "Move failed: {Source} -> {Dest}", source, dest);
                         return FileOperationResult.Failed($"Failed to move '{name}': {ex.Message}");
                     }
@@ -158,12 +181,33 @@ public sealed class FileOperationService : IFileOperationService
                 ReportCompleted(progress, FileOperationType.Move, itemsProcessed);
                 return FileOperationResult.Ok(itemsProcessed);
             }, cancellationToken);
-        }
-        finally
+    }
+
+    /// <summary>Deletes a temporary "replaced" backup after a successful move. Best effort.</summary>
+    private static void DeleteBackup(string? backupPath)
+    {
+        if (string.IsNullOrEmpty(backupPath)) return;
+        try
         {
-            if (_operationLock.CurrentCount == 0)
-                _operationLock.Release();
+            if (Directory.Exists(backupPath)) Directory.Delete(backupPath, true);
+            else if (File.Exists(backupPath)) File.Delete(backupPath);
         }
+        catch { /* best effort — the backup is orphaned but no data is lost */ }
+    }
+
+    /// <summary>Restores a temporarily-renamed destination back to its original path after a failed move.</summary>
+    private static void RestoreBackup(string? backupPath, string originalDest)
+    {
+        if (string.IsNullOrEmpty(backupPath)) return;
+        try
+        {
+            // Only restore if the move did not already recreate the destination.
+            if (File.Exists(originalDest) || Directory.Exists(originalDest)) return;
+
+            if (Directory.Exists(backupPath)) Directory.Move(backupPath, originalDest);
+            else if (File.Exists(backupPath)) File.Move(backupPath, originalDest);
+        }
+        catch { /* best effort */ }
     }
 
     public async Task<FileOperationResult> DeleteAsync(
@@ -172,10 +216,7 @@ public sealed class FileOperationService : IFileOperationService
         IProgress<FileOperationProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        await _operationLock.WaitAsync(cancellationToken);
-        try
-        {
-            return await Task.Run(async () =>
+        return await Task.Run(async () =>
             {
                 // Phase 1: Count total items for accurate progress
                 int totalItems;
@@ -252,11 +293,6 @@ public sealed class FileOperationService : IFileOperationService
 
                 return FileOperationResult.Ok(itemsProcessed);
             }, cancellationToken);
-        }
-        finally
-        {
-            _operationLock.Release();
-        }
     }
 
     private static int CountItems(string path)
@@ -342,10 +378,7 @@ public sealed class FileOperationService : IFileOperationService
 
     public async Task<FileOperationResult> RenameAsync(string path, string newName, CancellationToken cancellationToken = default)
     {
-        await _operationLock.WaitAsync(cancellationToken);
-        try
-        {
-            return await Task.Run(() =>
+        return await Task.Run(() =>
             {
                 try
                 {
@@ -382,20 +415,12 @@ public sealed class FileOperationService : IFileOperationService
                     return FileOperationResult.Failed(ex.Message);
                 }
             }, cancellationToken);
-        }
-        finally
-        {
-            _operationLock.Release();
-        }
     }
 
     public async Task<(FileOperationResult Result, string? CreatedPath)> CreateDirectoryAsync(
         string parentDirectory, string? suggestedName = null, CancellationToken cancellationToken = default)
     {
-        await _operationLock.WaitAsync(cancellationToken);
-        try
-        {
-            return await Task.Run<(FileOperationResult, string?)>(() =>
+        return await Task.Run<(FileOperationResult, string?)>(() =>
             {
                 try
                 {
@@ -419,20 +444,12 @@ public sealed class FileOperationService : IFileOperationService
                     return (FileOperationResult.Failed(ex.Message), null);
                 }
             }, cancellationToken);
-        }
-        finally
-        {
-            _operationLock.Release();
-        }
     }
 
     public async Task<(FileOperationResult Result, string? CreatedPath)> CreateFileAsync(
         string parentDirectory, string fileName, CancellationToken cancellationToken = default)
     {
-        await _operationLock.WaitAsync(cancellationToken);
-        try
-        {
-            return await Task.Run<(FileOperationResult, string?)>(() =>
+        return await Task.Run<(FileOperationResult, string?)>(() =>
             {
                 try
                 {
@@ -451,11 +468,6 @@ public sealed class FileOperationService : IFileOperationService
                     return (FileOperationResult.Failed(ex.Message), null);
                 }
             }, cancellationToken);
-        }
-        finally
-        {
-            _operationLock.Release();
-        }
     }
 
     // --- Private helpers ---
@@ -481,26 +493,37 @@ public sealed class FileOperationService : IFileOperationService
             }
         }
 
-        await using var sourceStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, true);
-
         try
         {
-            await using var destStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
-
-            var buffer = new byte[BufferSize];
-            int read;
-            while ((read = await sourceStream.ReadAsync(buffer, ct)) > 0)
+            await using (var sourceStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, true))
+            await using (var destStream = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true))
             {
-                await destStream.WriteAsync(buffer.AsMemory(0, read), ct);
-                state.BytesProcessed += read;
+                var buffer = new byte[BufferSize];
+                int read;
+                while ((read = await sourceStream.ReadAsync(buffer, ct)) > 0)
+                {
+                    await destStream.WriteAsync(buffer.AsMemory(0, read), ct);
+                    state.BytesProcessed += read;
 
-                ReportProgress(progress, FileOperationType.Copy, Path.GetFileName(source),
-                    state.ItemsProcessed, state.TotalItems, state.BytesProcessed, state.TotalBytes, state);
+                    // Throttled: report at most every ~100ms to keep the UI responsive.
+                    if (state.ShouldReport())
+                        ReportProgress(progress, FileOperationType.Copy, Path.GetFileName(source),
+                            state.ItemsProcessed, state.TotalItems, state.BytesProcessed, state.TotalBytes, state);
+                }
+
+                // Flush the OS write cache before the stream is disposed so the file is fully
+                // written to disk (prevents "incomplete" results on large files).
+                await destStream.FlushAsync(ct);
             }
 
-            // Preserve timestamps
-            var fi = new FileInfo(source);
-            File.SetLastWriteTime(dest, fi.LastWriteTime);
+            // Timestamps are set after both streams are closed so the handle isn't locked.
+            try
+            {
+                var fi = new FileInfo(source);
+                File.SetCreationTime(dest, fi.CreationTime);
+                File.SetLastWriteTime(dest, fi.LastWriteTime);
+            }
+            catch { /* timestamp preservation is best-effort */ }
         }
         catch (OperationCanceledException)
         {
@@ -574,7 +597,23 @@ public sealed class FileOperationService : IFileOperationService
         public int ItemsProcessed;
         public int TotalItems;
         public System.Diagnostics.Stopwatch Stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // Throttling: only surface a progress report every so often so multi-GB copies don't
+        // flood the UI thread with hundreds of thousands of updates (which froze the UI).
+        private long _lastReportMs = -1;
+        public bool ShouldReport()
+        {
+            var now = Stopwatch.ElapsedMilliseconds;
+            if (_lastReportMs < 0 || now - _lastReportMs >= ProgressThrottleMs)
+            {
+                _lastReportMs = now;
+                return true;
+            }
+            return false;
+        }
     }
+
+    private const int ProgressThrottleMs = 100;
 
     private static string GetUniquePath(string path)
     {

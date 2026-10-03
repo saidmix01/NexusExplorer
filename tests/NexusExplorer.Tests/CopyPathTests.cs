@@ -39,6 +39,7 @@ public class CopyPathTests
             Mock.Of<IFileWatcherService>(),
             Mock.Of<IStatePersistenceService>(),
             Mock.Of<IFolderColorService>(),
+            Mock.Of<IFilePropertiesService>(),
             Mock.Of<IFileOperationManager>(),
             Mock.Of<IEditorService>(),
             Mock.Of<ITerminalDiscoveryService>(),

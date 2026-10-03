@@ -69,15 +69,16 @@ public class PreviewServiceTests
     }
 
     [Fact]
-    public void CanPreview_Directory_ReturnsFalse()
+    public void CanPreview_Directory_ReturnsTrue()
     {
+        // Folders are now previewable: the preview lists their contents.
         var item = new FileSystemItem
         {
             Name = "SomeFolder",
             Path = @"C:\SomeFolder",
             Type = FileSystemItemType.Directory
         };
-        Assert.False(_sut.CanPreview(item));
+        Assert.True(_sut.CanPreview(item));
     }
 
     // --- GetPreviewType ---
@@ -104,7 +105,7 @@ public class PreviewServiceTests
     }
 
     [Fact]
-    public void GetPreviewType_Directory_ReturnsNone()
+    public void GetPreviewType_Directory_ReturnsFolder()
     {
         var item = new FileSystemItem
         {
@@ -112,7 +113,7 @@ public class PreviewServiceTests
             Path = @"C:\Folder",
             Type = FileSystemItemType.Directory
         };
-        Assert.Equal(PreviewType.None, _sut.GetPreviewType(item));
+        Assert.Equal(PreviewType.Folder, _sut.GetPreviewType(item));
     }
 
     [Fact]

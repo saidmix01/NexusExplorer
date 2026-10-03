@@ -29,14 +29,12 @@ public static class DragDropValidator
         if (VirtualPaths.IsVirtual(destinationPath))
             return DropValidationResult.Invalid("Cannot drop items on a virtual location.");
 
-        // Check each source path for validity
+        // Check each source path for hard errors, and track which items are already in place.
+        // A per-item no-op (already in the destination) must NOT invalidate the whole batch:
+        // only when *every* item is already there is the drop a true no-op.
+        var itemsAlreadyHere = 0;
         foreach (var source in sourcePaths)
         {
-            // Self-drop: dropping item onto its own parent directory (no-op)
-            var sourceParent = Path.GetDirectoryName(source);
-            if (string.Equals(sourceParent, destinationPath, StringComparison.OrdinalIgnoreCase))
-                return DropValidationResult.Invalid("Items are already in this location.");
-
             // Dropping a folder onto itself
             if (string.Equals(source, destinationPath, StringComparison.OrdinalIgnoreCase))
                 return DropValidationResult.Invalid("Cannot drop a folder into itself.");
@@ -44,10 +42,19 @@ public static class DragDropValidator
             // Dropping a folder into one of its own descendants
             if (IsDescendant(source, destinationPath))
                 return DropValidationResult.Invalid("Cannot move a folder into its own subfolder.");
+
+            // Self-drop: item already lives in the destination directory (no-op for this item)
+            var sourceParent = Path.GetDirectoryName(source);
+            if (string.Equals(sourceParent, destinationPath, StringComparison.OrdinalIgnoreCase))
+                itemsAlreadyHere++;
         }
 
-        // Same directory drag = invalid (items are already there)
-        if (isInternal && string.Equals(sourceDirectory, destinationPath, StringComparison.OrdinalIgnoreCase))
+        // Only a true no-op if ALL dragged items are already in the destination directory,
+        // or the internal drag started in the destination and every item is already there.
+        var allAlreadyHere = itemsAlreadyHere == sourcePaths.Count;
+        var sameSourceDir = isInternal
+            && string.Equals(sourceDirectory, destinationPath, StringComparison.OrdinalIgnoreCase);
+        if (allAlreadyHere || (sameSourceDir && allAlreadyHere))
             return DropValidationResult.Invalid("Items are already in this location.");
 
         // Determine effect
@@ -81,12 +88,26 @@ public static class DragDropValidator
         var normalizedChild = NormalizePath(potentialChild);
 
         // The child path must start with the parent path + separator
-        return normalizedChild.StartsWith(normalizedParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            || normalizedChild.StartsWith(normalizedParent + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        return normalizedChild.StartsWith(normalizedParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Canonicalizes a path for comparison: unifies separators to the platform separator,
+    /// collapses repeated separators, and trims trailing separators. This prevents false
+    /// negatives from mixed '/' and '\' or doubled separators (e.g. "C:\Foo\\Bar").
+    /// </summary>
     private static string NormalizePath(string path)
     {
-        return path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.IsNullOrEmpty(path)) return string.Empty;
+
+        var sep = Path.DirectorySeparatorChar;
+        var unified = path.Replace(Path.AltDirectorySeparatorChar, sep);
+
+        // Collapse consecutive separators into a single one.
+        var doubleSep = new string(sep, 2);
+        while (unified.Contains(doubleSep))
+            unified = unified.Replace(doubleSep, sep.ToString());
+
+        return unified.TrimEnd(sep);
     }
 }

@@ -43,9 +43,30 @@ public interface IFileOperationManager
         bool useRecycleBin,
         string title);
 
+    /// <summary>Compresses the given paths into an archive as a managed background operation.</summary>
+    Task<CompressionResult> CompressAsync(
+        IReadOnlyList<string> sourcePaths,
+        string title);
+
+    /// <summary>Extracts an archive as a managed background operation.</summary>
+    Task<CompressionResult> ExtractAsync(
+        string archivePath,
+        string? destinationDirectory,
+        string title);
+
+    /// <summary>Sends the given paths to a target as a managed background operation.</summary>
+    Task<FileOperationResult> SendToAsync(
+        IReadOnlyList<string> sourcePaths,
+        SendToTarget target,
+        string title,
+        Func<FileConflict, Task<ConflictAction>>? conflictResolver = null);
+
     void CancelOperation(FileOperation operation);
 
     void CancelAll();
 
     Task CancelAllAndWaitAsync();
+
+    /// <summary>Waits for all currently running operations to finish (without cancelling them).</summary>
+    Task WaitForAllAsync();
 }

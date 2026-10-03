@@ -17,36 +17,29 @@ public sealed class MacOSPlatformService : IPlatformService
 
     public Task OpenWithDefaultAsync(string path, CancellationToken cancellationToken = default)
     {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "open",
-            Arguments = $"\"{path}\"",
-            UseShellExecute = false
-        });
+        // With UseShellExecute=false, .NET on Unix does not strip quotes; pass args via ArgumentList.
+        var psi = new ProcessStartInfo { FileName = "open", UseShellExecute = false };
+        psi.ArgumentList.Add(path);
+        Process.Start(psi);
         return Task.CompletedTask;
     }
 
     public Task OpenWithDialogAsync(string path, CancellationToken cancellationToken = default)
     {
         // macOS: open -a prompts app selection if no default is set
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "open",
-            Arguments = $"\"{path}\"",
-            UseShellExecute = false
-        });
+        var psi = new ProcessStartInfo { FileName = "open", UseShellExecute = false };
+        psi.ArgumentList.Add(path);
+        Process.Start(psi);
         return Task.CompletedTask;
     }
 
     public Task ShowInSystemExplorerAsync(string path, CancellationToken cancellationToken = default)
     {
         // macOS: open -R reveals the file in Finder
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "open",
-            Arguments = $"-R \"{path}\"",
-            UseShellExecute = false
-        });
+        var psi = new ProcessStartInfo { FileName = "open", UseShellExecute = false };
+        psi.ArgumentList.Add("-R");
+        psi.ArgumentList.Add(path);
+        Process.Start(psi);
         return Task.CompletedTask;
     }
 

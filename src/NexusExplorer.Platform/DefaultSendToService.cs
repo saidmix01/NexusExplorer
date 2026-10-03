@@ -61,9 +61,12 @@ public sealed class DefaultSendToService : ISendToService
                 var fileName = Path.GetFileName(source);
                 var destPath = Path.Combine(target.Path, fileName);
 
-                // Handle conflict
+                // Handle conflict. Default to a non-destructive action (auto-rename) so that,
+                // without a resolver, we never silently overwrite an existing item.
+                var overwrite = false;
                 if (File.Exists(destPath) || Directory.Exists(destPath))
                 {
+                    var action = ConflictAction.RenameAutomatically;
                     if (conflictResolver is not null)
                     {
                         var conflict = new FileConflict
@@ -72,10 +75,21 @@ public sealed class DefaultSendToService : ISendToService
                             DestinationPath = destPath,
                             FileName = fileName
                         };
-                        var action = await conflictResolver(conflict);
-                        if (action == ConflictAction.Skip) { itemsProcessed++; continue; }
-                        if (action == ConflictAction.RenameAutomatically)
-                        {
+                        action = await conflictResolver(conflict);
+                    }
+
+                    switch (action)
+                    {
+                        case ConflictAction.Skip:
+                            itemsProcessed++;
+                            continue;
+                        case ConflictAction.Cancel:
+                            return new FileOperationResult { Success = false, Cancelled = true };
+                        case ConflictAction.Replace:
+                            overwrite = true;
+                            break;
+                        case ConflictAction.RenameAutomatically:
+                        default:
                             var name = Path.GetFileNameWithoutExtension(fileName);
                             var ext = Path.GetExtension(fileName);
                             var counter = 1;
@@ -84,14 +98,14 @@ public sealed class DefaultSendToService : ISendToService
                                 destPath = Path.Combine(target.Path, $"{name} ({counter}){ext}");
                                 counter++;
                             } while (File.Exists(destPath) || Directory.Exists(destPath));
-                        }
+                            break;
                     }
                 }
 
                 if (Directory.Exists(source))
                     CopyDirectory(source, destPath);
                 else if (File.Exists(source))
-                    File.Copy(source, destPath, overwrite: true);
+                    File.Copy(source, destPath, overwrite: overwrite);
 
                 itemsProcessed++;
                 progress?.Report(new FileOperationProgress

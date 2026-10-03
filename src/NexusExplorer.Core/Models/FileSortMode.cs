@@ -5,5 +5,6 @@ public enum FileSortMode
     Name,
     DateModified,
     Type,
-    Size
+    Size,
+    Color
 }

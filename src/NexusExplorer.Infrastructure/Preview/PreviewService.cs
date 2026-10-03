@@ -43,6 +43,9 @@ public sealed class PreviewService : IPreviewService
 
     public bool CanPreview(FileSystemItem item)
     {
+        if (item.Type == FileSystemItemType.Directory)
+            return true;
+
         if (item.Type != FileSystemItemType.File)
             return false;
 
@@ -52,6 +55,9 @@ public sealed class PreviewService : IPreviewService
 
     public PreviewType GetPreviewType(FileSystemItem item)
     {
+        if (item.Type == FileSystemItemType.Directory)
+            return PreviewType.Folder;
+
         if (item.Type != FileSystemItemType.File)
             return PreviewType.None;
 
@@ -61,6 +67,11 @@ public sealed class PreviewService : IPreviewService
             return PreviewType.Image;
 
         if (TextExtensions.Contains(ext))
+            return PreviewType.Text;
+
+        // Unknown extension: still try a text preview if the file looks like plain text.
+        // This covers extensionless files and less common text formats.
+        if (LooksLikeTextFile(item.Path))
             return PreviewType.Text;
 
         return PreviewType.Unsupported;
@@ -85,6 +96,7 @@ public sealed class PreviewService : IPreviewService
             {
                 PreviewType.Image => await GetImagePreviewAsync(item, cancellationToken),
                 PreviewType.Text => await GetTextPreviewAsync(item, cancellationToken),
+                PreviewType.Folder => await GetFolderPreviewAsync(item, cancellationToken),
                 PreviewType.Unsupported => PreviewResult.UnsupportedFile(item),
                 _ => PreviewResult.NoSelection()
             };
@@ -122,16 +134,29 @@ public sealed class PreviewService : IPreviewService
 
     private async Task<PreviewResult> GetTextPreviewAsync(FileSystemItem item, CancellationToken cancellationToken)
     {
-        // Don't load files larger than the limit
-        if (item.Size > MaxTextPreviewBytes)
+        // Resolve the real size on disk. item.Size may be null/stale; relying on it directly
+        // means a null size skips the guard and lets ReadToEnd load an arbitrarily large file
+        // into memory (potential OOM / UI freeze).
+        long? effectiveSize = item.Size;
+        try
+        {
+            effectiveSize = new FileInfo(item.Path).Length;
+        }
+        catch
+        {
+            // Fall back to the reported size if the file can't be stat'd right now.
+        }
+
+        // Don't load files larger than the limit (treat an unknown size as too large to be safe).
+        if (effectiveSize is null || effectiveSize > MaxTextPreviewBytes)
         {
             return new PreviewResult
             {
                 Type = PreviewType.Text,
-                TextContent = $"[File too large to preview: {FormatSize(item.Size ?? 0)}. Maximum preview size is {FormatSize(MaxTextPreviewBytes)}.]",
+                TextContent = $"[File too large to preview: {FormatSize(effectiveSize ?? 0)}. Maximum preview size is {FormatSize(MaxTextPreviewBytes)}.]",
                 FileName = item.Name,
                 FileType = GetFileTypeDescription(item),
-                FileSize = item.Size,
+                FileSize = effectiveSize,
                 LastModified = item.LastModified,
                 FullPath = item.Path
             };
@@ -154,6 +179,131 @@ public sealed class PreviewService : IPreviewService
             LastModified = item.LastModified,
             FullPath = item.Path
         };
+    }
+
+    /// <summary>Maximum number of entries listed in a folder preview.</summary>
+    private const int MaxFolderEntries = 500;
+
+    private async Task<PreviewResult> GetFolderPreviewAsync(FileSystemItem item, CancellationToken cancellationToken)
+    {
+        var (text, folderCount, fileCount) = await Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var directories = new List<string>();
+            var files = new List<string>();
+
+            try
+            {
+                foreach (var dir in Directory.EnumerateDirectories(item.Path))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    directories.Add(System.IO.Path.GetFileName(dir));
+                }
+
+                foreach (var file in Directory.EnumerateFiles(item.Path))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    files.Add(System.IO.Path.GetFileName(file));
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return ("[Access denied.]", 0, 0);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return ("[Folder not found.]", 0, 0);
+            }
+
+            directories.Sort(StringComparer.OrdinalIgnoreCase);
+            files.Sort(StringComparer.OrdinalIgnoreCase);
+
+            var totalFolders = directories.Count;
+            var totalFiles = files.Count;
+
+            var sb = new System.Text.StringBuilder();
+            var listed = 0;
+
+            // Folders first (prefixed so they read as folders), then files.
+            foreach (var d in directories)
+            {
+                if (listed >= MaxFolderEntries) break;
+                sb.Append('\uD83D').Append('\uDCC1').Append("  ").AppendLine(d); // 📁
+                listed++;
+            }
+
+            foreach (var f in files)
+            {
+                if (listed >= MaxFolderEntries) break;
+                sb.Append('\uD83D').Append('\uDCC4').Append("  ").AppendLine(f); // 📄
+                listed++;
+            }
+
+            if (totalFolders + totalFiles == 0)
+                sb.AppendLine("[Empty folder]");
+            else if (totalFolders + totalFiles > MaxFolderEntries)
+                sb.AppendLine().Append("… and ")
+                  .Append(totalFolders + totalFiles - MaxFolderEntries)
+                  .AppendLine(" more item(s) not shown.");
+
+            return (sb.ToString().TrimEnd(), totalFolders, totalFiles);
+        }, cancellationToken);
+
+        var summary = FormatItemCounts(fileCount, folderCount);
+
+        return new PreviewResult
+        {
+            Type = PreviewType.Folder,
+            TextContent = text,
+            FileName = item.Name,
+            FileType = summary,
+            FileSize = null,
+            LastModified = item.LastModified,
+            FullPath = item.Path
+        };
+    }
+
+    /// <summary>
+    /// Heuristically detects whether a file is plain text by sampling the first few KB:
+    /// a NUL byte or a high ratio of non-printable bytes indicates binary content.
+    /// </summary>
+    private static bool LooksLikeTextFile(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            if (stream.Length == 0) return true;
+
+            Span<byte> buffer = stackalloc byte[4096];
+            var read = stream.Read(buffer);
+            if (read == 0) return true;
+
+            var sample = buffer[..read];
+            var suspicious = 0;
+            foreach (var b in sample)
+            {
+                if (b == 0) return false; // NUL byte → binary
+                // Count control chars that aren't common whitespace (tab, LF, CR, FF).
+                if (b < 0x09 || (b > 0x0D && b < 0x20))
+                    suspicious++;
+            }
+
+            // Allow a small fraction of control bytes before calling it binary.
+            return suspicious <= read / 32;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string FormatItemCounts(int files, int folders)
+    {
+        var parts = new List<string>();
+        parts.Add($"{folders} folder{(folders != 1 ? "s" : "")}");
+        parts.Add($"{files} file{(files != 1 ? "s" : "")}");
+        return string.Join(", ", parts);
     }
 
     private static string GetExtension(FileSystemItem item)

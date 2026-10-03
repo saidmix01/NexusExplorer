@@ -23,6 +23,8 @@ public static class PlatformServiceRegistration
                 services.AddSingleton<IGlobalHotkeyService, WindowsGlobalHotkeyService>();
                 services.AddSingleton<IRecycleBinService, WindowsRecycleBinService>();
                 services.AddSingleton<ISendToService, WindowsSendToService>();
+                if (OperatingSystem.IsWindows())
+                    services.AddSingleton<IShellMetadataProvider, WindowsShellPropertyProvider>();
                 break;
             case PlatformKind.Linux:
                 services.AddSingleton<IPlatformService, LinuxPlatformService>();

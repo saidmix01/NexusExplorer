@@ -13,7 +13,8 @@ namespace NexusExplorer.Infrastructure.FileOperations;
 public sealed class CompressionService : ICompressionService
 {
     private readonly ILogger<CompressionService> _logger;
-    private const int BufferSize = 81920; // 80 KB buffer for streaming
+    private const int BufferSize = 1024 * 1024; // 1 MB buffer for streaming
+    private const int ProgressThrottleMs = 100;  // throttle UI progress updates
 
     public CompressionService(ILogger<CompressionService> logger)
     {
@@ -47,6 +48,7 @@ public sealed class CompressionService : ICompressionService
             var stopwatch = Stopwatch.StartNew();
             long bytesProcessed = 0;
             var itemsProcessed = 0;
+            long lastReportMs = -1;
 
             // Create ZIP with streaming
             await Task.Run(async () =>
@@ -79,7 +81,9 @@ public sealed class CompressionService : ICompressionService
                         cancellationToken.ThrowIfCancellationRequested();
                         await entryStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
                         bytesProcessed += bytesRead;
-                        ReportProgress(progress, entry.RelativePath, itemsProcessed, totalItems, bytesProcessed, totalBytes, stopwatch);
+                        // Throttle: at most one UI update every ~100ms so large files don't flood it.
+                        if (ShouldReport(stopwatch, ref lastReportMs))
+                            ReportProgress(progress, entry.RelativePath, itemsProcessed, totalItems, bytesProcessed, totalBytes, stopwatch);
                     }
 
                     itemsProcessed++;
@@ -294,6 +298,18 @@ public sealed class CompressionService : ICompressionService
         });
     }
 
+    /// <summary>True when at least <see cref="ProgressThrottleMs"/> have passed since the last report.</summary>
+    private static bool ShouldReport(Stopwatch stopwatch, ref long lastReportMs)
+    {
+        var now = stopwatch.ElapsedMilliseconds;
+        if (lastReportMs < 0 || now - lastReportMs >= ProgressThrottleMs)
+        {
+            lastReportMs = now;
+            return true;
+        }
+        return false;
+    }
+
     private void CleanupIncompleteZip(string? zipPath)
     {
         if (zipPath is null) return;
@@ -345,6 +361,7 @@ public sealed class CompressionService : ICompressionService
             var stopwatch = Stopwatch.StartNew();
             long bytesProcessed = 0;
             var itemsProcessed = 0;
+            long lastReportMs = -1;
 
             await Task.Run(async () =>
             {
@@ -354,15 +371,25 @@ public sealed class CompressionService : ICompressionService
                 var totalItems = archive.Entries.Count;
                 var totalBytes = archive.Entries.Sum(e => e.Length);
 
+                // Emit an initial 0% report so the UI shows the operation immediately.
+                ReportExtractProgress(progress, Path.GetFileName(archivePath), 0, totalItems, 0, totalBytes, stopwatch);
+
                 foreach (var entry in archive.Entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var entryPath = Path.Combine(destinationDirectory, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
 
-                    // Security: prevent path traversal
+                    // Security: prevent path traversal (Zip Slip). Compare against the destination
+                    // root WITH a trailing separator so a sibling like "out\data-evil" cannot pass
+                    // a prefix check against "out\data".
                     var fullPath = Path.GetFullPath(entryPath);
-                    if (!fullPath.StartsWith(Path.GetFullPath(destinationDirectory), StringComparison.OrdinalIgnoreCase))
+                    var destRoot = Path.GetFullPath(destinationDirectory);
+                    var destRootWithSep = destRoot.EndsWith(Path.DirectorySeparatorChar)
+                        ? destRoot
+                        : destRoot + Path.DirectorySeparatorChar;
+                    if (!string.Equals(fullPath, destRoot, StringComparison.OrdinalIgnoreCase)
+                        && !fullPath.StartsWith(destRootWithSep, StringComparison.OrdinalIgnoreCase))
                     {
                         _logger.LogWarning("Skipping entry with path traversal: {Entry}", entry.FullName);
                         itemsProcessed++;
@@ -394,7 +421,9 @@ public sealed class CompressionService : ICompressionService
                         cancellationToken.ThrowIfCancellationRequested();
                         await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
                         bytesProcessed += bytesRead;
-                        ReportExtractProgress(progress, entry.FullName, itemsProcessed, totalItems, bytesProcessed, totalBytes, stopwatch);
+                        // Throttle UI updates to keep the window responsive during large extractions.
+                        if (ShouldReport(stopwatch, ref lastReportMs))
+                            ReportExtractProgress(progress, entry.FullName, itemsProcessed, totalItems, bytesProcessed, totalBytes, stopwatch);
                     }
 
                     itemsProcessed++;

@@ -59,11 +59,19 @@ public partial class FileOperation : ObservableObject
     [ObservableProperty]
     private string? _errorMessage;
 
-    public double ProgressPercentage => TotalBytes > 0
-        ? (double)BytesProcessed / TotalBytes * 100
-        : TotalFiles > 0
-            ? (double)CurrentFileIndex / TotalFiles * 100
-            : 0;
+    public double ProgressPercentage
+    {
+        get
+        {
+            var raw = TotalBytes > 0
+                ? (double)BytesProcessed / TotalBytes * 100
+                : TotalFiles > 0
+                    ? (double)CurrentFileIndex / TotalFiles * 100
+                    : 0;
+            // Clamp so a slightly-off byte total can never render as e.g. 20000%.
+            return raw < 0 ? 0 : raw > 100 ? 100 : raw;
+        }
+    }
 
     public bool CanCancel => !_cancellationRequested && Status is FileOperationStatus.Pending or FileOperationStatus.Running;
 

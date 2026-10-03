@@ -53,6 +53,7 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
 
     private readonly ILogger<WindowsGlobalHotkeyService> _logger;
     private readonly object _sync = new();
+    private readonly object _startLock = new();
     private readonly ConcurrentQueue<Action> _commands = new();
     private readonly Dictionary<int, GlobalHotkey> _hotkeysById = new();
     private readonly Dictionary<string, int> _idByHotkeyId = new();
@@ -180,13 +181,20 @@ public sealed class WindowsGlobalHotkeyService : IGlobalHotkeyService
     {
         if (_thread is not null) return;
 
-        _thread = new Thread(MessageLoop)
+        // Guard against concurrent Register calls creating two message-loop threads.
+        lock (_startLock)
         {
-            IsBackground = true,
-            Name = "NexusExplorer.GlobalHotkey",
-        };
-        _thread.Start();
-        _ready.Wait();
+            if (_thread is not null) return;
+
+            var thread = new Thread(MessageLoop)
+            {
+                IsBackground = true,
+                Name = "NexusExplorer.GlobalHotkey",
+            };
+            thread.Start();
+            _ready.Wait();
+            _thread = thread;
+        }
     }
 
     private void MessageLoop()

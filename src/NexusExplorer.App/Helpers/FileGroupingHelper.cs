@@ -74,6 +74,12 @@ public static class FileGroupingHelper
                 var sizeOrder = new[] { "Folders", "Empty", "Small", "Medium", "Large", "Huge" };
                 groups = groups.OrderBy(g => Array.IndexOf(sizeOrder, g.Key));
                 break;
+            case FileGroupMode.Color:
+                // "No color" group last, colored groups first (alphabetically by hex).
+                groups = items.GroupBy(GetColorGroup)
+                    .OrderBy(g => g.Key == NoColorGroup ? 1 : 0)
+                    .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+                break;
             default:
                 return items;
         }
@@ -92,6 +98,16 @@ public static class FileGroupingHelper
         }
 
         return grouped;
+    }
+
+    internal const string NoColorGroup = "No color";
+
+    /// <summary>
+    /// Group name for color grouping: the color hex for colored folders, or "No color".
+    /// </summary>
+    internal static string GetColorGroup(FileSystemItem item)
+    {
+        return string.IsNullOrEmpty(item.FolderColor) ? NoColorGroup : item.FolderColor!;
     }
 
     internal static string GetDateGroup(FileSystemItem item)

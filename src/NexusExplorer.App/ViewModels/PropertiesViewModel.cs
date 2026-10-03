@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NexusExplorer.Core.Abstractions;
@@ -70,6 +71,37 @@ public partial class PropertiesViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _attributesChanged;
+
+    // --- General tab (extra) ---
+    [ObservableProperty]
+    private string _sizeOnDiskText = "";
+
+    [ObservableProperty]
+    private string _ownerText = "";
+
+    [ObservableProperty]
+    private string _opensWithText = "";
+
+    [ObservableProperty]
+    private bool _isSystem;
+
+    // --- Details tab ---
+    public ObservableCollection<DetailGroupViewModel> DetailGroups { get; } = [];
+
+    [ObservableProperty]
+    private bool _isLoadingDetails;
+
+    // --- Security tab ---
+    public ObservableCollection<SecurityEntry> SecurityEntries { get; } = [];
+
+    [ObservableProperty]
+    private string _securityOwnerText = "";
+
+    [ObservableProperty]
+    private string? _securityNote;
+
+    [ObservableProperty]
+    private bool _isLoadingSecurity;
 
     /// <summary>
     /// Fired when attributes have been applied and the Explorer should refresh.
@@ -148,9 +180,12 @@ public partial class PropertiesViewModel : ObservableObject
         IsDirectory = props.IsDirectory;
         IsReadOnly = props.IsReadOnly;
         IsHidden = props.IsHidden;
+        IsSystem = props.IsSystem;
         CreatedText = FormatDate(props.Created);
         ModifiedText = FormatDate(props.Modified);
         AccessedText = FormatDate(props.LastAccessed);
+        OwnerText = props.Owner ?? "";
+        OpensWithText = props.OpensWith ?? "";
 
         if (props.IsDirectory)
         {
@@ -168,6 +203,7 @@ public partial class PropertiesViewModel : ObservableObject
             {
                 var result = await _propertiesService.CalculateDirectorySizeAsync(item.Path, progress, ct);
                 SizeText = FormatSize(result.TotalSize);
+                SizeOnDiskText = FormatSize(result.TotalSize);
                 ContainsText = $"{result.FileCount:N0} files, {result.FolderCount:N0} folders";
             }
             catch (OperationCanceledException) { }
@@ -179,7 +215,54 @@ public partial class PropertiesViewModel : ObservableObject
         else
         {
             SizeText = FormatSize(props.Size);
+            SizeOnDiskText = FormatSize(props.SizeOnDisk);
             ContainsText = "";
+        }
+
+        // Load the Details and Security tabs in the background (non-blocking for General).
+        _ = LoadDetailsAsync(item.Path, ct);
+        _ = LoadSecurityAsync(item.Path, ct);
+    }
+
+    private async Task LoadDetailsAsync(string path, CancellationToken ct)
+    {
+        IsLoadingDetails = true;
+        try
+        {
+            var groups = await _propertiesService.GetDetailsAsync(path, ct);
+            ct.ThrowIfCancellationRequested();
+
+            DetailGroups.Clear();
+            foreach (var g in groups)
+                DetailGroups.Add(new DetailGroupViewModel(g.Name, g.Properties));
+        }
+        catch (OperationCanceledException) { }
+        catch { /* details are best-effort */ }
+        finally
+        {
+            IsLoadingDetails = false;
+        }
+    }
+
+    private async Task LoadSecurityAsync(string path, CancellationToken ct)
+    {
+        IsLoadingSecurity = true;
+        try
+        {
+            var info = await _propertiesService.GetSecurityAsync(path, ct);
+            ct.ThrowIfCancellationRequested();
+
+            SecurityOwnerText = info.Owner ?? "";
+            SecurityNote = info.Note;
+            SecurityEntries.Clear();
+            foreach (var e in info.Entries)
+                SecurityEntries.Add(e);
+        }
+        catch (OperationCanceledException) { }
+        catch { /* security is best-effort */ }
+        finally
+        {
+            IsLoadingSecurity = false;
         }
     }
 
@@ -361,4 +444,11 @@ public partial class PropertiesViewModel : ObservableObject
         if (folders > 0) parts.Add($"{folders} folder{(folders != 1 ? "s" : "")}");
         return string.Join(", ", parts);
     }
+}
+
+/// <summary>Bindable wrapper for a detail group (a header + its key/value rows) in the Details tab.</summary>
+public sealed class DetailGroupViewModel(string name, IReadOnlyList<DetailProperty> properties)
+{
+    public string Name { get; } = name;
+    public IReadOnlyList<DetailProperty> Properties { get; } = properties;
 }

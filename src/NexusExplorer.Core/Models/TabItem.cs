@@ -92,7 +92,8 @@ public sealed class TabItem : INotifyPropertyChanged
     public bool CanGoBack => _backStack.Count > 0;
     public bool CanGoForward => _forwardStack.Count > 0;
     public bool CanGoUp => !string.IsNullOrEmpty(CurrentPath)
-                           && Path.GetDirectoryName(CurrentPath) is not null;
+                           && !VirtualPaths.IsVirtual(CurrentPath)
+                           && !string.IsNullOrEmpty(Path.GetDirectoryName(CurrentPath));
 
     /// <summary>Gets a snapshot of the back navigation stack (most recent first) for persistence.</summary>
     public IReadOnlyList<string> BackStackSnapshot => _backStack.ToList();
@@ -103,7 +104,16 @@ public sealed class TabItem : INotifyPropertyChanged
     public TabItem(string path, string? title = null)
     {
         CurrentPath = path;
-        _title = title ?? Path.GetFileName(path) ?? path;
+        _title = title ?? ResolveTitle(path);
+    }
+
+    private static string ResolveTitle(string path)
+    {
+        if (VirtualPaths.IsVirtual(path))
+            return VirtualPaths.GetDisplayName(path);
+
+        // Path.GetFileName returns "" (never null) for roots like "C:\"; fall back to the path.
+        return Path.GetFileName(path) is { Length: > 0 } name ? name : path;
     }
 
     /// <summary>
@@ -159,6 +169,8 @@ public sealed class TabItem : INotifyPropertyChanged
 
     public string? GoUp()
     {
+        if (!CanGoUp) return null;
+
         var parent = Path.GetDirectoryName(CurrentPath);
         if (string.IsNullOrEmpty(parent)) return null;
 

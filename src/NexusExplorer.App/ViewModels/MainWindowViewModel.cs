@@ -19,11 +19,11 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IClipboardService _clipboardService;
     private readonly ISearchService _searchService;
     private readonly IOperationHistoryService _historyService;
-    private readonly ICompressionService _compressionService;
     private readonly ISendToService _sendToService;
     private readonly IFileWatcherService _fileWatcherService;
     private readonly IStatePersistenceService _statePersistence;
     private readonly IFolderColorService _folderColorService;
+    private readonly IFilePropertiesService _filePropertiesService;
     private readonly IFileOperationManager _fileOperationManager;
     private readonly IEditorService _editorService;
     private readonly ITerminalDiscoveryService _terminalDiscovery;
@@ -33,7 +33,6 @@ public partial class MainWindowViewModel : ObservableObject
 
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _previewCts;
-    private CancellationTokenSource? _operationCts;
     private CancellationTokenSource? _searchCts;
     private readonly List<string> _pinnedFavorites = [];
 
@@ -448,6 +447,7 @@ public partial class MainWindowViewModel : ObservableObject
         IFileWatcherService fileWatcherService,
         IStatePersistenceService statePersistence,
         IFolderColorService folderColorService,
+        IFilePropertiesService filePropertiesService,
         IFileOperationManager fileOperationManager,
         IEditorService editorService,
         ITerminalDiscoveryService terminalDiscovery,
@@ -464,11 +464,14 @@ public partial class MainWindowViewModel : ObservableObject
         _clipboardService = clipboardService;
         _searchService = searchService;
         _historyService = historyService;
-        _compressionService = compressionService;
+        // compressionService is now owned by the FileOperationManager; kept as a ctor param
+        // for DI/signature stability but no longer stored on the view model.
+        _ = compressionService;
         _sendToService = sendToService;
         _fileWatcherService = fileWatcherService;
         _statePersistence = statePersistence;
         _folderColorService = folderColorService;
+        _filePropertiesService = filePropertiesService;
         _fileOperationManager = fileOperationManager;
         _fileOperationManager.Changed += OnFileOperationsChanged;
         _editorService = editorService;
@@ -566,11 +569,11 @@ public partial class MainWindowViewModel : ObservableObject
         _clipboardService = null!;
         _searchService = null!;
         _historyService = null!;
-        _compressionService = null!;
         _sendToService = null!;
         _fileWatcherService = null!;
         _statePersistence = null!;
         _folderColorService = null!;
+        _filePropertiesService = null!;
         _fileOperationManager = null!;
         _editorService = null!;
         _terminalDiscovery = null!;
@@ -588,11 +591,15 @@ public partial class MainWindowViewModel : ObservableObject
 
     private async Task RestoreSessionAsync()
     {
+        var launchPath = App.InitialLaunchPath;
+        var hasLaunchPath = !string.IsNullOrWhiteSpace(launchPath) && Directory.Exists(launchPath);
+        var restoredTabs = false;
         try
         {
             var state = await _statePersistence.LoadAsync();
             if (state is not null && state.Tabs.Count > 0)
             {
+                restoredTabs = true;
                 // Restore preferences
                 IsPreviewVisible = state.Preferences.ShowPreviewPanel;
                 IconZoomLevel = state.Preferences.IconZoomLevel;
@@ -622,21 +629,60 @@ public partial class MainWindowViewModel : ObservableObject
                     _tabService.AddTab(tab, activate: i == state.ActiveTabIndex);
                 }
             }
-            else
+            else if (!hasLaunchPath)
             {
-                // No saved state: create default tab
+                // No saved state and no launch path: create default Home tab.
                 _tabService.CreateTab(_platformService.HomePath, "Home");
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to restore session; falling back to default tab");
-            // Fallback to default if restore fails
-            if (_tabService.Tabs.Count == 0)
+            // Fallback to default if restore fails (unless we have a launch path to open).
+            if (_tabService.Tabs.Count == 0 && !hasLaunchPath)
                 _tabService.CreateTab(_platformService.HomePath, "Home");
         }
 
+        // If launched with a folder (e.g. "Reveal in Explorer" or a folder double-click):
+        //  - if we restored/have existing tabs, open it in a NEW tab (keep the user's tabs);
+        //  - if this is a fresh launch with no tabs yet, open it as the single tab (no extra Home).
+        if (hasLaunchPath)
+        {
+            App.InitialLaunchPath = null;
+            if (restoredTabs || _tabService.Tabs.Count > 0)
+                OpenFolder(launchPath);
+            else
+            {
+                _tabService.CreateTab(launchPath!);
+                LoadDirectory(launchPath!);
+            }
+        }
+
         RegisterGlobalHotkeyOnStartup();
+    }
+
+    /// <summary>
+    /// Opens the given folder in a NEW tab (used for external launches: shell "open"/"reveal",
+    /// folder double-click, and single-instance activation). Creating a new tab preserves
+    /// whatever the user was already looking at.
+    /// </summary>
+    [RelayCommand]
+    private void OpenFolder(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        if (!Directory.Exists(path) && !VirtualPaths.IsVirtual(path)) return;
+
+        // If this folder is already open in a tab, activate that tab instead of duplicating it.
+        var existing = _tabService.Tabs.FirstOrDefault(t =>
+            string.Equals(t.CurrentPath, path, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            _tabService.ActivateTab(existing.Id);
+            return;
+        }
+
+        _tabService.CreateTab(path);
+        LoadDirectory(path);
     }
 
     /// <summary>
@@ -736,7 +782,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void GoBack()
     {
-        var path = _tabService.ActiveTab.GoBack();
+        if (_tabService.ActiveTab is not { } tab) return;
+        var path = tab.GoBack();
         if (path is not null)
             LoadDirectory(path);
     }
@@ -744,7 +791,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void GoForward()
     {
-        var path = _tabService.ActiveTab.GoForward();
+        if (_tabService.ActiveTab is not { } tab) return;
+        var path = tab.GoForward();
         if (path is not null)
             LoadDirectory(path);
     }
@@ -752,7 +800,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void GoUp()
     {
-        var path = _tabService.ActiveTab.GoUp();
+        if (_tabService.ActiveTab is not { } tab) return;
+        var path = tab.GoUp();
         if (path is not null)
             LoadDirectory(path);
     }
@@ -760,7 +809,8 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Refresh()
     {
-        var path = _tabService.ActiveTab.Refresh();
+        if (_tabService.ActiveTab is not { } tab) return;
+        var path = tab.Refresh();
         LoadDirectory(path);
     }
 
@@ -1105,50 +1155,19 @@ public partial class MainWindowViewModel : ObservableObject
         var paths = GetSelectedPaths();
         if (paths.Count == 0) return;
 
-        _operationCts?.Cancel();
-        _operationCts = new CancellationTokenSource();
-        IsOperationInProgress = true;
-        OperationProgress = 0;
-        OperationTitle = "Compressing...";
-        OperationStatusText = "Preparing...";
+        var title = paths.Count == 1
+            ? $"Compressing '{Path.GetFileName(paths[0])}'"
+            : $"Compressing {paths.Count} items";
 
-        var progress = new Progress<FileOperationProgress>(p =>
-        {
-            OperationProgress = p.Percentage;
-            OperationTitle = "Compressing...";
-            OperationStatusText = p.IsCompleted
-                ? "Complete"
-                : $"Files: {p.CurrentItemIndex} / {p.TotalItems}";
-
-            if (!p.IsCompleted && p.BytesPerSecond > 0)
-            {
-                var speed = FormatSize((long)p.BytesPerSecond) + "/s";
-                OperationSpeedText = $"{FormatSize(p.BytesProcessed)} / {FormatSize(p.TotalBytes)}\n{speed}";
-            }
-            else
-            {
-                OperationSpeedText = string.Empty;
-            }
-
-            if (p.IsCompleted)
-            {
-                IsOperationInProgress = false;
-                _ = RefreshCurrentDirectoryAsync();
-            }
-        });
-
-        var result = await _compressionService.CompressAsync(paths, progress, _operationCts.Token);
-
-        IsOperationInProgress = false;
+        // Managed background operation (File Operation Center, survives tray, cancellable).
+        var result = await _fileOperationManager.CompressAsync(paths, title);
 
         if (result.Success)
-        {
             StatusText = $"Created {Path.GetFileName(result.ArchivePath)}";
-        }
         else if (!result.Cancelled && result.Error is not null)
-        {
             StatusText = result.Error;
-        }
+
+        await RefreshCurrentDirectoryAsync();
     }
 
     [RelayCommand]
@@ -1166,54 +1185,20 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        _operationCts?.Cancel();
-        _operationCts = new CancellationTokenSource();
-        IsOperationInProgress = true;
-        OperationProgress = 0;
-        OperationTitle = "Extracting...";
-        OperationStatusText = "Preparing...";
-        OperationSpeedText = string.Empty;
+        var title = $"Extracting '{Path.GetFileName(archivePath)}'";
 
+        // Suppress watcher refreshes during extraction to avoid list churn.
         using var _suppress = _fileWatcherService.Suppress();
 
-        var progress = new Progress<FileOperationProgress>(p =>
-        {
-            OperationProgress = p.Percentage;
-            OperationTitle = "Extracting...";
-            OperationStatusText = p.IsCompleted
-                ? "Complete"
-                : $"{p.CurrentItem} ({p.CurrentItemIndex}/{p.TotalItems})";
-
-            if (!p.IsCompleted && p.BytesPerSecond > 0)
-            {
-                var speed = FormatSize((long)p.BytesPerSecond) + "/s";
-                OperationSpeedText = $"{FormatSize(p.BytesProcessed)} / {FormatSize(p.TotalBytes)}\n{speed}";
-            }
-            else
-            {
-                OperationSpeedText = string.Empty;
-            }
-
-            if (p.IsCompleted)
-            {
-                IsOperationInProgress = false;
-                _ = RefreshCurrentDirectoryAsync();
-            }
-        });
-
-        var result = await _compressionService.ExtractAsync(archivePath, null, progress, _operationCts.Token);
-
-        IsOperationInProgress = false;
+        // Managed background operation (File Operation Center, survives tray, cancellable).
+        var result = await _fileOperationManager.ExtractAsync(archivePath, null, title);
 
         if (result.Success)
-        {
             StatusText = $"Extracted to {Path.GetFileName(result.ArchivePath)}";
-            await RefreshCurrentDirectoryAsync();
-        }
         else if (!result.Cancelled && result.Error is not null)
-        {
             StatusText = result.Error;
-        }
+
+        await RefreshCurrentDirectoryAsync();
     }
 
     // --- WinRAR integration ---
@@ -1461,52 +1446,24 @@ public partial class MainWindowViewModel : ObservableObject
         var paths = GetSelectedPaths();
         if (paths.Count == 0) return;
 
-        _operationCts?.Cancel();
-        _operationCts = new CancellationTokenSource();
-        IsOperationInProgress = true;
-        OperationProgress = 0;
-        OperationTitle = $"Sending to {target.Name}...";
-        OperationStatusText = "Preparing...";
+        _applyToAllAction = null;
+        ApplyConflictToAll = false;
 
-        var progress = new Progress<FileOperationProgress>(p =>
-        {
-            OperationProgress = p.Percentage;
-            OperationStatusText = p.IsCompleted
-                ? "Complete"
-                : $"{p.CurrentItem} ({p.CurrentItemIndex}/{p.TotalItems})";
+        var title = paths.Count == 1
+            ? $"Sending '{Path.GetFileName(paths[0])}' to {target.Name}"
+            : $"Sending {paths.Count} items to {target.Name}";
 
-            if (!p.IsCompleted && p.BytesPerSecond > 0)
-            {
-                var speed = FormatSize((long)p.BytesPerSecond) + "/s";
-                OperationSpeedText = $"{FormatSize(p.BytesProcessed)} / {FormatSize(p.TotalBytes)}\n{speed}";
-            }
-            else
-            {
-                OperationSpeedText = string.Empty;
-            }
-
-            if (p.IsCompleted)
-            {
-                IsOperationInProgress = false;
-                _ = RefreshCurrentDirectoryAsync();
-            }
-        });
-
-        var result = await _sendToService.SendToAsync(
-            paths, target, progress,
-            conflictResolver: HandleConflictAsync,
-            cancellationToken: _operationCts.Token);
-
-        IsOperationInProgress = false;
+        // Runs as a managed background operation (visible in the File Operation Center,
+        // survives minimizing to tray, and cancellable from any tab).
+        var result = await _fileOperationManager.SendToAsync(
+            paths, target, title, conflictResolver: HandleConflictAsync);
 
         if (result.Success)
-        {
             StatusText = $"Sent {result.ItemsProcessed} item(s) to {target.Name}";
-        }
         else if (!result.Cancelled && result.Error is not null)
-        {
             StatusText = result.Error;
-        }
+
+        await RefreshCurrentDirectoryAsync();
     }
 
     // --- Folder Color commands ---
@@ -1524,25 +1481,39 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void SetFolderColor(string? colorHex)
     {
-        var item = SelectedItem;
-        if (item is null || item.Type != FileSystemItemType.Directory) return;
-        _folderColorService.SetColor(item.Path, colorHex);
-        // Update the tab color if we just colored the current directory
-        if (string.Equals(item.Path, CurrentPath, StringComparison.OrdinalIgnoreCase)
-            && _tabService?.ActiveTab is { } tab)
-            tab.FolderColor = colorHex;
+        // Apply to all selected directories (or the single selected item as a fallback).
+        var targets = SelectedItems.Count > 0
+            ? SelectedItems.Where(i => i.Type == FileSystemItemType.Directory).ToList()
+            : SelectedItem is { Type: FileSystemItemType.Directory } single ? [single] : [];
+        if (targets.Count == 0) return;
+
+        foreach (var folder in targets)
+        {
+            _folderColorService.SetColor(folder.Path, colorHex);
+            if (string.Equals(folder.Path, CurrentPath, StringComparison.OrdinalIgnoreCase)
+                && _tabService?.ActiveTab is { } tab)
+                tab.FolderColor = colorHex;
+        }
+        RefreshColorGroups();
         LoadDirectory(CurrentPath);
     }
 
     [RelayCommand]
     private void RemoveFolderColor()
     {
-        var item = SelectedItem;
-        if (item is null || item.Type != FileSystemItemType.Directory) return;
-        _folderColorService.SetColor(item.Path, null);
-        if (string.Equals(item.Path, CurrentPath, StringComparison.OrdinalIgnoreCase)
-            && _tabService?.ActiveTab is { } tab)
-            tab.FolderColor = null;
+        var targets = SelectedItems.Count > 0
+            ? SelectedItems.Where(i => i.Type == FileSystemItemType.Directory).ToList()
+            : SelectedItem is { Type: FileSystemItemType.Directory } single ? [single] : [];
+        if (targets.Count == 0) return;
+
+        foreach (var folder in targets)
+        {
+            _folderColorService.SetColor(folder.Path, null);
+            if (string.Equals(folder.Path, CurrentPath, StringComparison.OrdinalIgnoreCase)
+                && _tabService?.ActiveTab is { } tab)
+                tab.FolderColor = null;
+        }
+        RefreshColorGroups();
         LoadDirectory(CurrentPath);
     }
 
@@ -2094,13 +2065,6 @@ public partial class MainWindowViewModel : ObservableObject
         CreateDialogError = string.Empty;
     }
 
-    [RelayCommand]
-    private void CancelOperation()
-    {
-        _operationCts?.Cancel();
-        IsOperationInProgress = false;
-    }
-
     // --- File Operation Center commands ---
 
     [RelayCommand]
@@ -2118,8 +2082,19 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ContinueUsing() => IsCloseConfirmationVisible = false;
 
+    /// <summary>
+    /// Keeps the app open until the running operations finish, then exits automatically.
+    /// The File Operation Center stays visible so the user can watch progress.
+    /// </summary>
     [RelayCommand]
-    private void WaitForOperation() => IsCloseConfirmationVisible = false;
+    private async Task WaitForOperation()
+    {
+        IsCloseConfirmationVisible = false;
+        IsFileOperationCenterVisible = true;
+
+        await _fileOperationManager.WaitForAllAsync();
+        ApplicationExitRequested?.Invoke();
+    }
 
     [RelayCommand]
     private async Task CancelAndExitAsync()
@@ -2324,20 +2299,43 @@ public partial class MainWindowViewModel : ObservableObject
         await Terminal.OpenTerminalAtPathAsync(path);
     }
 
-    [RelayCommand]
-    private async Task ShowPropertiesAsync(FileSystemItem? item)
-    {
-        var path = item?.Path ?? SelectedItem?.Path;
-        if (string.IsNullOrWhiteSpace(path)) return;
+    /// <summary>
+    /// Raised when the Properties dialog should be shown for the given items.
+    /// The App layer handles this by creating and showing the PropertiesWindow.
+    /// </summary>
+    public event Action<IReadOnlyList<FileSystemItem>>? ShowPropertiesRequested;
 
-        try
+    [RelayCommand]
+    private Task ShowPropertiesAsync(FileSystemItem? item)
+    {
+        // Determine which items to show. If the invoked item is part of the current
+        // multi-selection (or no specific item was passed), show the whole selection;
+        // otherwise show just the invoked item. This matches Windows Explorer behavior:
+        // selecting several items and choosing Properties opens ONE combined dialog.
+        IReadOnlyList<FileSystemItem> items;
+        if (item is not null && !SelectedItems.Contains(item))
         {
-            await _platformService.ShowPropertiesAsync(path);
+            items = [item];
         }
-        catch (Exception ex)
+        else if (SelectedItems.Count > 0)
         {
-            StatusText = $"Cannot show properties: {ex.Message}";
+            items = SelectedItems.ToList();
         }
+        else if (item is not null)
+        {
+            items = [item];
+        }
+        else if (SelectedItem is not null)
+        {
+            items = [SelectedItem];
+        }
+        else
+        {
+            return Task.CompletedTask;
+        }
+
+        ShowPropertiesRequested?.Invoke(items);
+        return Task.CompletedTask;
     }
 
     private IReadOnlyList<string> GetSelectedPaths()
@@ -2375,14 +2373,15 @@ public partial class MainWindowViewModel : ObservableObject
     private void OnFileWatcherChanged(object? sender, EventArgs e)
     {
         // Marshal to UI thread and refresh if we're not already loading
-        if (IsLoading || IsSearchActive || IsOperationInProgress) return;
+        if (IsLoading || IsSearchActive || IsOperationInProgress || HasActiveOperations) return;
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            if (!IsLoading && !IsSearchActive && !IsOperationInProgress)
+            if (!IsLoading && !IsSearchActive && !IsOperationInProgress && !HasActiveOperations)
             {
                 var path = _tabService?.ActiveTab?.CurrentPath;
-                if (!string.IsNullOrEmpty(path))
-                    LoadDirectory(path);
+                // Silent refresh: diff-merge so the list doesn't flicker or lose selection.
+                if (!string.IsNullOrEmpty(path) && !VirtualPaths.IsVirtual(path))
+                    LoadDirectory(path, silent: true);
             }
         });
     }
@@ -2600,7 +2599,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void CopyCurrentPath()
     {
-        var path = VirtualPaths.IsVirtual(CurrentPath) ? CurrentPath : CurrentPath;
+        var path = VirtualPaths.IsVirtual(CurrentPath) ? VirtualPaths.GetDisplayName(CurrentPath) : CurrentPath;
         CopyTextToClipboardRequested?.Invoke(path);
         StatusText = "Path copied";
     }
@@ -2611,7 +2610,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         LoadDirectory(tab.CurrentPath);
         SelectedItem = tab.SelectedItem;
-        SyncTabCollection();
+        // Note: do NOT rebuild the Tabs collection here. Activation only changes which tab is
+        // active (handled by the IsActive binding); rebuilding the collection on every navigation
+        // caused the tab strip to visually reshuffle.
 
         // Restore layout state
         LayoutMode = tab.LayoutMode;
@@ -2663,32 +2664,66 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void SyncTabCollection()
     {
-        Tabs.Clear();
-        foreach (var tab in _tabService.Tabs)
-            Tabs.Add(tab);
+        var source = _tabService.Tabs;
+
+        // Reconcile in place instead of Clear()+re-add so the tab strip never flickers or
+        // visually reshuffles. Remove tabs no longer present, then add/move to match order.
+        for (var i = Tabs.Count - 1; i >= 0; i--)
+        {
+            if (!source.Contains(Tabs[i]))
+                Tabs.RemoveAt(i);
+        }
+
+        for (var i = 0; i < source.Count; i++)
+        {
+            var tab = source[i];
+            if (i >= Tabs.Count)
+            {
+                Tabs.Add(tab);
+            }
+            else if (!ReferenceEquals(Tabs[i], tab))
+            {
+                var existing = Tabs.IndexOf(tab);
+                if (existing >= 0)
+                    Tabs.Move(existing, i);
+                else
+                    Tabs.Insert(i, tab);
+            }
+        }
     }
 
-    private async void LoadDirectory(string path)
+    private void LoadDirectory(string path) => LoadDirectory(path, silent: false);
+
+    /// <summary>
+    /// Loads a directory into the file list.
+    /// When <paramref name="silent"/> is true (e.g. an automatic refresh triggered by the file
+    /// watcher), the existing <see cref="Items"/> collection is diff-merged instead of cleared
+    /// and repopulated, so the list doesn't flicker/reset selection when nothing visible changed.
+    /// </summary>
+    private async void LoadDirectory(string path, bool silent)
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var ct = _loadCts.Token;
 
-        CurrentPath = path;
-        AddressBarText = VirtualPaths.IsVirtual(path) ? VirtualPaths.GetDisplayName(path) : path;
-        IsAddressBarEditing = false;
-        HasError = false;
-        ErrorMessage = string.Empty;
-        IsLoading = true;
-        IsEmpty = false;
-        SelectedItem = null;
+        if (!silent)
+        {
+            CurrentPath = path;
+            AddressBarText = VirtualPaths.IsVirtual(path) ? VirtualPaths.GetDisplayName(path) : path;
+            IsAddressBarEditing = false;
+            HasError = false;
+            ErrorMessage = string.Empty;
+            IsLoading = true;
+            IsEmpty = false;
+            SelectedItem = null;
 
-        _logger.LogDebug("Loading directory: {Path}", path);
+            _logger.LogDebug("Loading directory: {Path}", path);
 
-        Items.Clear();
-        UpdateBreadcrumbs(path);
-        NotifyNavigationState();
+            Items.Clear();
+            UpdateBreadcrumbs(path);
+            NotifyNavigationState();
+        }
 
         // Update the tab's folder color from the color service
         if (_tabService?.ActiveTab is { } activeTab && _folderColorService is not null)
@@ -2708,6 +2743,11 @@ public partial class MainWindowViewModel : ObservableObject
                 // Load network drives
                 resultItems = await LoadNetworkItemsAsync(ct);
             }
+            else if (VirtualPaths.IsColorGroup(path))
+            {
+                // Virtual view: all folders assigned a specific color, gathered from any location.
+                resultItems = await LoadColorGroupItemsAsync(path, ct);
+            }
             else
             {
                 var items = await _fileSystemService.GetItemsAsync(path, ct);
@@ -2720,10 +2760,23 @@ public partial class MainWindowViewModel : ObservableObject
                 ? resultItems.ToList()
                 : resultItems.Where(i => !i.IsHidden).ToList();
 
-            var sortedItems = SortItems(filteredItems);
+            // Stamp the custom folder color onto directory items so the UI can show a color
+            // swatch and sort/group by color without querying the service per item.
+            filteredItems = StampFolderColors(filteredItems);
 
-            foreach (var item in sortedItems)
-                Items.Add(item);
+            var sortedItems = SortItems(filteredItems).ToList();
+
+            if (silent)
+            {
+                // Diff-merge into the existing collection so unchanged rows are left untouched
+                // (no flicker, selection preserved). Only add/remove what actually changed.
+                MergeItems(sortedItems);
+            }
+            else
+            {
+                foreach (var item in sortedItems)
+                    Items.Add(item);
+            }
 
             ItemCount = Items.Count;
             IsEmpty = ItemCount == 0;
@@ -2742,6 +2795,8 @@ public partial class MainWindowViewModel : ObservableObject
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning(ex, "Access denied loading directory: {Path}", path);
+            // On a silent background refresh, don't disrupt the view with an error overlay.
+            if (silent) return;
             HasError = true;
             ErrorMessage = "Access denied. You don't have permission to view this folder.";
             StatusText = "Access denied";
@@ -2750,6 +2805,7 @@ public partial class MainWindowViewModel : ObservableObject
         catch (DirectoryNotFoundException ex)
         {
             _logger.LogWarning(ex, "Directory not found: {Path}", path);
+            if (silent) return;
             HasError = true;
             ErrorMessage = $"The folder \"{Path.GetFileName(path)}\" no longer exists.";
             StatusText = "Folder not found";
@@ -2758,6 +2814,7 @@ public partial class MainWindowViewModel : ObservableObject
         catch (IOException ex)
         {
             _logger.LogError(ex, "Cannot read directory: {Path}", path);
+            if (silent) return;
             HasError = true;
             ErrorMessage = $"Cannot read folder: {ex.Message}";
             StatusText = "Error";
@@ -2766,6 +2823,7 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error loading directory: {Path}", path);
+            if (silent) return;
             HasError = true;
             ErrorMessage = $"An unexpected error occurred: {ex.Message}";
             StatusText = "Error";
@@ -2773,8 +2831,102 @@ public partial class MainWindowViewModel : ObservableObject
         }
         finally
         {
-            IsLoading = false;
+            if (!silent)
+                IsLoading = false;
         }
+    }
+
+    /// <summary>
+    /// Reconciles the current <see cref="Items"/> collection with a freshly computed list,
+    /// applying the minimal set of edits so unchanged rows stay in place (no flicker, no
+    /// selection loss). A row is considered "the same" when its visible signature matches.
+    /// </summary>
+    private void MergeItems(List<FileSystemItem> newItems)
+    {
+        // Fast path: identical length and every signature matches → nothing to do.
+        if (Items.Count == newItems.Count)
+        {
+            var identical = true;
+            for (var i = 0; i < newItems.Count; i++)
+            {
+                if (!SameRow(Items[i], newItems[i]))
+                {
+                    identical = false;
+                    break;
+                }
+            }
+            if (identical) return;
+        }
+
+        // Remove rows (from the end) that are no longer present anywhere in the new list.
+        var newKeys = new HashSet<string>(newItems.Select(RowKey), StringComparer.OrdinalIgnoreCase);
+        for (var i = Items.Count - 1; i >= 0; i--)
+        {
+            if (!newKeys.Contains(RowKey(Items[i])))
+                Items.RemoveAt(i);
+        }
+
+        // Walk the target list and align Items to it, inserting/replacing as needed.
+        for (var i = 0; i < newItems.Count; i++)
+        {
+            var target = newItems[i];
+
+            if (i >= Items.Count)
+            {
+                Items.Add(target);
+                continue;
+            }
+
+            if (SameRow(Items[i], target))
+                continue;
+
+            // If the target already exists later in the collection, move it up; otherwise insert.
+            var existingIndex = -1;
+            for (var j = i + 1; j < Items.Count; j++)
+            {
+                if (string.Equals(RowKey(Items[j]), RowKey(target), StringComparison.OrdinalIgnoreCase))
+                {
+                    existingIndex = j;
+                    break;
+                }
+            }
+
+            if (existingIndex >= 0)
+            {
+                // Content may have changed (size/date/color) — replace so the row updates.
+                if (SameRow(Items[existingIndex], target))
+                    Items.Move(existingIndex, i);
+                else
+                {
+                    Items.RemoveAt(existingIndex);
+                    Items.Insert(i, target);
+                }
+            }
+            else
+            {
+                Items.Insert(i, target);
+            }
+        }
+
+        // Trim any trailing leftovers.
+        while (Items.Count > newItems.Count)
+            Items.RemoveAt(Items.Count - 1);
+    }
+
+    /// <summary>Stable identity of a row (path, or the group name for headers).</summary>
+    private static string RowKey(FileSystemItem item)
+        => item.IsGroupHeader ? "\u0000header:" + item.GroupName : item.Path;
+
+    /// <summary>True when two rows are visually identical (same identity and displayed data).</summary>
+    private static bool SameRow(FileSystemItem a, FileSystemItem b)
+    {
+        return a.IsGroupHeader == b.IsGroupHeader
+            && string.Equals(RowKey(a), RowKey(b), StringComparison.OrdinalIgnoreCase)
+            && string.Equals(a.Name, b.Name, StringComparison.Ordinal)
+            && a.Size == b.Size
+            && a.LastModified == b.LastModified
+            && string.Equals(a.FolderColor, b.FolderColor, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(a.GroupName, b.GroupName, StringComparison.Ordinal);
     }
 
     private async Task<IEnumerable<FileSystemItem>> LoadThisPCItemsAsync(CancellationToken ct)
@@ -2869,6 +3021,89 @@ public partial class MainWindowViewModel : ObservableObject
         return result;
     }
 
+    /// <summary>
+    /// Copies each directory item with its assigned custom color stamped onto FolderColor.
+    /// Non-directory items and group headers pass through unchanged.
+    /// </summary>
+    private List<FileSystemItem> StampFolderColors(List<FileSystemItem> items)
+    {
+        if (_folderColorService is null) return items;
+
+        var result = new List<FileSystemItem>(items.Count);
+        foreach (var item in items)
+        {
+            if (item.Type != FileSystemItemType.Directory || item.IsGroupHeader)
+            {
+                result.Add(item);
+                continue;
+            }
+
+            var color = _folderColorService.GetColor(item.Path);
+            if (color is null)
+            {
+                result.Add(item);
+                continue;
+            }
+
+            result.Add(new FileSystemItem
+            {
+                Name = item.Name,
+                Path = item.Path,
+                Type = item.Type,
+                Size = item.Size,
+                LastModified = item.LastModified,
+                Created = item.Created,
+                Extension = item.Extension,
+                IsHidden = item.IsHidden,
+                IsReadOnly = item.IsReadOnly,
+                TotalSpace = item.TotalSpace,
+                FreeSpace = item.FreeSpace,
+                IsGroupHeader = item.IsGroupHeader,
+                GroupName = item.GroupName,
+                FolderColor = color
+            });
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Builds the item list for a color-group virtual view: every folder assigned the given
+    /// color, gathered from anywhere on disk. Missing folders are skipped.
+    /// </summary>
+    private Task<IEnumerable<FileSystemItem>> LoadColorGroupItemsAsync(string virtualPath, CancellationToken ct)
+    {
+        var targetColor = VirtualPaths.GetColorHex(virtualPath);
+        if (string.IsNullOrEmpty(targetColor) || _folderColorService is null)
+            return Task.FromResult(Enumerable.Empty<FileSystemItem>());
+
+        return Task.Run<IEnumerable<FileSystemItem>>(() =>
+        {
+            var result = new List<FileSystemItem>();
+            foreach (var (folderPath, colorHex) in _folderColorService.GetAllColors())
+            {
+                ct.ThrowIfCancellationRequested();
+
+                if (!string.Equals(colorHex, targetColor, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!Directory.Exists(folderPath))
+                    continue;
+
+                DateTime? modified = null;
+                try { modified = Directory.GetLastWriteTime(folderPath); } catch { }
+
+                result.Add(new FileSystemItem
+                {
+                    Name = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
+                    Path = folderPath,
+                    Type = FileSystemItemType.Directory,
+                    LastModified = modified,
+                    FolderColor = colorHex
+                });
+            }
+            return result;
+        }, ct);
+    }
+
     private IEnumerable<FileSystemItem> SortItems(IEnumerable<FileSystemItem> items)
     {
         var list = items.ToList();
@@ -2877,37 +3112,44 @@ public partial class MainWindowViewModel : ObservableObject
         if (list.Any(x => x.IsGroupHeader))
             return list;
 
-        // 1. First, sort by the selected property
-        IOrderedEnumerable<FileSystemItem>? sorted = null;
+        // Name is the stable tie-breaker so items that compare equal on the primary key
+        // (e.g. same modified date, same size) always appear in a deterministic order instead
+        // of the OS enumeration order, which changes between loads.
+        var asc = SortDirection == SortDirection.Ascending;
+        var nameComparer = StringComparer.OrdinalIgnoreCase;
 
-        switch (SortMode)
+        // 1. Primary sort by the selected property, 2. directories first, 3. tie-break by name.
+        //    We start with the directories-first key so folders always lead regardless of mode.
+        IOrderedEnumerable<FileSystemItem> ordered = list
+            .OrderByDescending(x => x.Type == FileSystemItemType.Directory ? 1 : 0);
+
+        ordered = SortMode switch
         {
-            case FileSortMode.Name:
-                sorted = SortDirection == SortDirection.Ascending 
-                    ? list.OrderBy(x => x.Name) 
-                    : list.OrderByDescending(x => x.Name);
-                break;
-            case FileSortMode.DateModified:
-                sorted = SortDirection == SortDirection.Ascending 
-                    ? list.OrderBy(x => x.LastModified) 
-                    : list.OrderByDescending(x => x.LastModified);
-                break;
-            case FileSortMode.Type:
-                sorted = SortDirection == SortDirection.Ascending 
-                    ? list.OrderBy(x => x.Extension ?? "") 
-                    : list.OrderByDescending(x => x.Extension ?? "");
-                break;
-            case FileSortMode.Size:
-                sorted = SortDirection == SortDirection.Ascending 
-                    ? list.OrderBy(x => x.Size ?? 0) 
-                    : list.OrderByDescending(x => x.Size ?? 0);
-                break;
-        }
+            FileSortMode.Name => asc
+                ? ordered.ThenBy(x => x.Name, nameComparer)
+                : ordered.ThenByDescending(x => x.Name, nameComparer),
 
-        // 2. Then ensure directories always come first
-        var finalSorted = sorted?
-            .OrderByDescending(x => x.Type == FileSystemItemType.Directory ? 1 : 0)
-            .ToList() ?? list;
+            FileSortMode.DateModified => asc
+                ? ordered.ThenBy(x => x.LastModified ?? DateTime.MinValue)
+                : ordered.ThenByDescending(x => x.LastModified ?? DateTime.MinValue),
+
+            FileSortMode.Type => asc
+                ? ordered.ThenBy(x => x.Extension ?? "", nameComparer)
+                : ordered.ThenByDescending(x => x.Extension ?? "", nameComparer),
+
+            FileSortMode.Size => asc
+                ? ordered.ThenBy(x => x.Size ?? 0)
+                : ordered.ThenByDescending(x => x.Size ?? 0),
+
+            FileSortMode.Color => asc
+                ? ordered.ThenBy(x => string.IsNullOrEmpty(x.FolderColor) ? 1 : 0).ThenBy(x => x.FolderColor ?? "", nameComparer)
+                : ordered.ThenBy(x => string.IsNullOrEmpty(x.FolderColor) ? 1 : 0).ThenByDescending(x => x.FolderColor ?? "", nameComparer),
+
+            _ => ordered
+        };
+
+        // Final deterministic tie-break by name (ascending) for any items still equal.
+        var finalSorted = ordered.ThenBy(x => x.Name, nameComparer).ToList();
 
         // 3. Apply grouping
         if (GroupMode != FileGroupMode.None)
@@ -2930,7 +3172,8 @@ public partial class MainWindowViewModel : ObservableObject
         _previewCts = new CancellationTokenSource();
         var ct = _previewCts.Token;
 
-        if (item is null || item.Type != FileSystemItemType.File)
+        if (item is null ||
+            item.Type is not (FileSystemItemType.File or FileSystemItemType.Directory))
         {
             ClearPreview();
             return;
@@ -3098,6 +3341,11 @@ public partial class MainWindowViewModel : ObservableObject
                 network.Items.Add(drive);
         }
 
+        // COLORS group: one entry per color currently in use. Clicking navigates to a virtual
+        // view that lists every folder with that color.
+        var colorsGroup = CreateSystemGroup(SidebarGroupIds.Colors, "COLORS", persistedGroups);
+        RefreshColorGroups(colorsGroup);
+
         // Custom (user-created) groups, restored from persistence
         foreach (var groupState in persistedGroups.Where(g => !g.IsSystem))
         {
@@ -3116,6 +3364,40 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             SidebarGroups.Add(group);
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the COLORS sidebar group: one clickable entry per distinct color currently
+    /// assigned to at least one folder. Each entry navigates to the color's virtual view.
+    /// </summary>
+    private void RefreshColorGroups(SidebarGroup? colorsGroup = null)
+    {
+        var group = colorsGroup ?? FindGroup(SidebarGroupIds.Colors);
+        if (group is null || _folderColorService is null) return;
+
+        group.Items.Clear();
+
+        var presetsByHex = _folderColorService.GetPresetColors()
+            .GroupBy(p => p.ColorHex, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.OrdinalIgnoreCase);
+
+        // Distinct colors in use, ordered by name/hex for a stable list.
+        var usedColors = _folderColorService.GetAllColors().Values
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(hex => presetsByHex.TryGetValue(hex, out var n) ? n : hex, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var hex in usedColors)
+        {
+            var name = presetsByHex.TryGetValue(hex, out var presetName) ? presetName : hex;
+            group.Items.Add(new NavigationItem
+            {
+                Name = name,
+                Path = VirtualPaths.ColorGroup(hex),
+                Kind = NavigationItemKind.SpecialLocation,
+                Section = NavigationSection.Locations,
+                ColorHex = hex
+            });
         }
     }
 
@@ -3307,7 +3589,51 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _tabService.ActiveTab.SortMode = mode;
         }
+        NotifySortIndicators();
         LoadDirectory(CurrentPath);
+    }
+
+    /// <summary>
+    /// Sorts by the given column (from a details-view header click). Clicking the current sort
+    /// column toggles the direction; clicking a different column sorts it ascending.
+    /// </summary>
+    [RelayCommand]
+    private void SortByColumn(FileSortMode mode)
+    {
+        if (SortMode == mode)
+            SortDirection = SortDirection == SortDirection.Ascending
+                ? SortDirection.Descending
+                : SortDirection.Ascending;
+        else
+        {
+            SortMode = mode;
+            SortDirection = SortDirection.Ascending;
+        }
+
+        if (_tabService.ActiveTab is { } tab)
+        {
+            tab.SortMode = SortMode;
+            tab.SortDirection = SortDirection;
+        }
+
+        NotifySortIndicators();
+        LoadDirectory(CurrentPath);
+    }
+
+    // --- Details-view header sort indicators (arrow shown on the active column) ---
+    public bool IsSortedByName => SortMode == FileSortMode.Name;
+    public bool IsSortedByModified => SortMode == FileSortMode.DateModified;
+    public bool IsSortedBySize => SortMode == FileSortMode.Size;
+    public bool IsSortedByColor => SortMode == FileSortMode.Color;
+    public string SortDirectionGlyph => SortDirection == SortDirection.Ascending ? "\u25B2" : "\u25BC"; // ▲ / ▼
+
+    private void NotifySortIndicators()
+    {
+        OnPropertyChanged(nameof(IsSortedByName));
+        OnPropertyChanged(nameof(IsSortedByModified));
+        OnPropertyChanged(nameof(IsSortedBySize));
+        OnPropertyChanged(nameof(IsSortedByColor));
+        OnPropertyChanged(nameof(SortDirectionGlyph));
     }
 
     [RelayCommand]
@@ -3318,6 +3644,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _tabService.ActiveTab.SortDirection = direction;
         }
+        NotifySortIndicators();
         LoadDirectory(CurrentPath);
     }
 
@@ -3381,7 +3708,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(value))
         {
             // Immediately clear search and restore directory view
-            ExecuteSearch(value);
+            ExecuteSearch(value, _searchCts.Token);
         }
         else
         {
@@ -3396,7 +3723,7 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             await Task.Delay(300, cts.Token);
-            ExecuteSearch(query);
+            ExecuteSearch(query, cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -3404,9 +3731,11 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private async void ExecuteSearch(string query)
+    private async void ExecuteSearch(string query, CancellationToken? token = null)
     {
-        var ct = _searchCts?.Token ?? CancellationToken.None;
+        // Use the token captured when this search was launched, not the current field,
+        // so a newer search's CTS can't be mistaken for this one (cancellation race).
+        var ct = token ?? _searchCts?.Token ?? CancellationToken.None;
 
         if (string.IsNullOrWhiteSpace(query))
         {

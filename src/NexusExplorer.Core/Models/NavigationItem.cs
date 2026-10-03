@@ -26,6 +26,12 @@ public sealed class NavigationItem
     /// path are shown dimmed so they can be removed without throwing.
     /// </summary>
     public bool IsAvailable { get; init; } = true;
+
+    /// <summary>
+    /// Optional color hex (e.g. "#4A9FDE") used to render a color swatch for color-group
+    /// sidebar entries. Null for ordinary navigation items.
+    /// </summary>
+    public string? ColorHex { get; init; }
 }
 
 public enum NavigationItemKind

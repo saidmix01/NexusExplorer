@@ -12,7 +12,8 @@ public sealed class FileWatcherService : IFileWatcherService
     private readonly ILogger<FileWatcherService> _logger;
     private FileSystemWatcher? _watcher;
     private Timer? _debounceTimer;
-    private int _suppressCount;
+    private Timer? _restartTimer;
+    private volatile int _suppressCount;
     private readonly object _lock = new();
     private const int DebounceDelayMs = 300;
 
@@ -97,6 +98,8 @@ public sealed class FileWatcherService : IFileWatcherService
 
         _debounceTimer?.Dispose();
         _debounceTimer = null;
+        _restartTimer?.Dispose();
+        _restartTimer = null;
         CurrentPath = null;
     }
 
@@ -135,8 +138,11 @@ public sealed class FileWatcherService : IFileWatcherService
 
             if (!string.IsNullOrEmpty(path))
             {
-                // Delay restart slightly to avoid tight loops
-                _debounceTimer = new Timer(_ =>
+                // Delay restart slightly to avoid tight loops. Use a dedicated timer so a
+                // normal debounce event can't dispose/replace the restart timer (which would
+                // leave the watcher permanently stopped).
+                _restartTimer?.Dispose();
+                _restartTimer = new Timer(_ =>
                 {
                     if (Directory.Exists(path))
                         Watch(path);

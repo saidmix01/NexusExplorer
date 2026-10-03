@@ -1,10 +1,12 @@
 using System.IO.Pipes;
+using System.Text;
 
 namespace NexusExplorer.App.Services;
 
 /// <summary>
-/// Ensures a single running Nexus Explorer instance and relays "activate" requests
-/// from subsequent launches to the existing instance via a named pipe.
+/// Ensures a single running Nexus Explorer instance and relays activation requests
+/// (optionally carrying a path to open) from subsequent launches to the existing
+/// instance via a named pipe.
 /// </summary>
 public sealed class SingleInstanceManager : IDisposable
 {
@@ -16,8 +18,11 @@ public sealed class SingleInstanceManager : IDisposable
 
     public bool IsFirstInstance { get; }
 
-    /// <summary>Raised when another instance requests that this instance be shown.</summary>
-    public event Action? ActivationRequested;
+    /// <summary>
+    /// Raised when another instance requests activation. The string argument is the path the
+    /// new launch wants to open, or null/empty if it only asked to show the window.
+    /// </summary>
+    public event Action<string?>? ActivationRequested;
 
     public SingleInstanceManager()
     {
@@ -26,16 +31,19 @@ public sealed class SingleInstanceManager : IDisposable
     }
 
     /// <summary>
-    /// Asks the already-running instance to show itself. Returns false if no listener
-    /// is available (i.e. no other instance is actually running).
+    /// Asks the already-running instance to show itself and, optionally, navigate to
+    /// <paramref name="path"/>. Returns false if no listener is available.
     /// </summary>
-    public static bool RequestActivation()
+    public static bool RequestActivation(string? path = null)
     {
         try
         {
             using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
             client.Connect(1500);
-            client.WriteByte(1);
+
+            var payload = Encoding.UTF8.GetBytes(path ?? string.Empty);
+            client.Write(payload, 0, payload.Length);
+            client.Flush();
             return true;
         }
         catch
@@ -68,11 +76,19 @@ public sealed class SingleInstanceManager : IDisposable
                 break;
             }
 
-            // The connection itself is the activation signal; drain the single byte.
-            try { server.ReadByte(); } catch { }
-            server.Dispose();
+            string? path = null;
+            try
+            {
+                using var reader = new StreamReader(server, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: false);
+                var text = await reader.ReadToEndAsync(token);
+                path = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+            }
+            catch
+            {
+                server.Dispose();
+            }
 
-            ActivationRequested?.Invoke();
+            ActivationRequested?.Invoke(path);
         }
     }
 

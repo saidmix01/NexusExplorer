@@ -17,6 +17,14 @@ public partial class MainWindow : Window
     private DragPreviewControl? _dragPreview;
     private ScrollViewer? _breadcrumbScroll;
 
+    // Last known "restored" (non-minimized, non-maximized) size/position. We persist THIS rather
+    // than the live Bounds so that saving while minimized or hidden in the tray doesn't record a
+    // bogus/minimized state — that was why the window kept reopening minimized.
+    private double _lastNormalWidth = 1100;
+    private double _lastNormalHeight = 720;
+    private PixelPoint _lastNormalPosition = new(int.MinValue, int.MinValue);
+    private bool _lastWasMaximized;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -24,6 +32,7 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnWindowPreviewKeyDown, RoutingStrategies.Tunnel);
         Loaded += OnWindowLoaded;
         Closing += OnWindowClosing;
+        PropertyChanged += OnWindowPropertyChanged;
 
         // Register window-level drag events for the drag preview overlay
         // Use Bubble strategy with handledEventsToo so we see events after child handlers process them
@@ -61,13 +70,8 @@ public partial class MainWindow : Window
             };
         }
 
-        // Register tab drag-and-drop events
-        var tabItemsControl = this.FindControl<ItemsControl>("TabItemsControl");
-        if (tabItemsControl is not null)
-        {
-            tabItemsControl.AddHandler(DragDrop.DragOverEvent, TabItem_DragOver);
-            tabItemsControl.AddHandler(DragDrop.DropEvent, TabItem_Drop);
-        }
+        // Tab drag-and-drop handlers are attached per-tab in XAML (DragDrop.DragOver / .Drop on
+        // each tab Border) so the drop target resolves to the correct tab.
 
         // Restore window bounds and wire up ViewModel events
         if (DataContext is MainWindowViewModel vm)
@@ -230,19 +234,59 @@ public partial class MainWindow : Window
     // Session persistence — save on close, restore on load
     // ================================================================
 
+    private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        // Track the maximized flag, and remember the size/position while the window is in its
+        // normal (restored) state so we can persist meaningful bounds later.
+        if (e.Property == WindowStateProperty)
+        {
+            if (WindowState == WindowState.Maximized)
+                _lastWasMaximized = true;
+            else if (WindowState == WindowState.Normal)
+                _lastWasMaximized = false;
+            CaptureNormalBoundsIfApplicable();
+        }
+        else if (e.Property == ClientSizeProperty || e.Property == BoundsProperty)
+        {
+            CaptureNormalBoundsIfApplicable();
+        }
+    }
+
+    private void CaptureNormalBoundsIfApplicable()
+    {
+        // Only capture when the window is actually shown in its normal state.
+        if (WindowState != WindowState.Normal || !IsVisible) return;
+        if (Bounds.Width <= 0 || Bounds.Height <= 0) return;
+
+        _lastNormalWidth = Bounds.Width;
+        _lastNormalHeight = Bounds.Height;
+        _lastNormalPosition = Position;
+    }
+
     private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm)
-        {
-            var bounds = Bounds;
-            var pos = Position;
-            await vm.SaveSessionAsync(
-                bounds.Width,
-                bounds.Height,
-                pos.X,
-                pos.Y,
-                WindowState == WindowState.Maximized);
-        }
+        await SaveWindowStateAsync();
+    }
+
+    /// <summary>
+    /// Persists the session and window state. Safe to call while the window is minimized or
+    /// hidden in the tray: it saves the last known normal bounds and the maximized flag, never
+    /// a minimized state.
+    /// </summary>
+    public async Task SaveWindowStateAsync()
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        // If currently in a normal, visible state, refresh the captured bounds first.
+        CaptureNormalBoundsIfApplicable();
+
+        var hasPos = _lastNormalPosition.X != int.MinValue && _lastNormalPosition.Y != int.MinValue;
+        await vm.SaveSessionAsync(
+            _lastNormalWidth,
+            _lastNormalHeight,
+            hasPos ? _lastNormalPosition.X : double.NaN,
+            hasPos ? _lastNormalPosition.Y : double.NaN,
+            _lastWasMaximized);
     }
 
     private async Task RestoreWindowBoundsAsync(MainWindowViewModel vm)

@@ -15,11 +15,18 @@ namespace NexusExplorer.Infrastructure.FileOperations;
 public sealed class FileOperationManager : IFileOperationManager
 {
     private readonly IFileOperationService _fileOperationService;
+    private readonly ICompressionService _compressionService;
+    private readonly ISendToService _sendToService;
     private readonly ConcurrentDictionary<Guid, Task> _runningTasks = new();
 
-    public FileOperationManager(IFileOperationService fileOperationService)
+    public FileOperationManager(
+        IFileOperationService fileOperationService,
+        ICompressionService compressionService,
+        ISendToService sendToService)
     {
         _fileOperationService = fileOperationService;
+        _compressionService = compressionService;
+        _sendToService = sendToService;
     }
 
     public ObservableCollection<FileOperation> Operations { get; } = [];
@@ -64,6 +71,87 @@ public sealed class FileOperationManager : IFileOperationManager
             title,
             (progress, ct) => _fileOperationService.DeleteAsync(paths, useRecycleBin, progress, ct));
 
+    public Task<FileOperationResult> SendToAsync(
+        IReadOnlyList<string> sourcePaths,
+        SendToTarget target,
+        string title,
+        Func<FileConflict, Task<ConflictAction>>? conflictResolver = null) =>
+        RunAsync(
+            FileOperationType.Copy, // Send To is a copy to a known target
+            DescribeSource(sourcePaths),
+            target.Name,
+            title,
+            (progress, ct) => _sendToService.SendToAsync(sourcePaths, target, progress, conflictResolver, ct));
+
+    public Task<CompressionResult> CompressAsync(
+        IReadOnlyList<string> sourcePaths,
+        string title) =>
+        RunCompressionAsync(
+            FileOperationType.Compress,
+            DescribeSource(sourcePaths),
+            null,
+            title,
+            (progress, ct) => _compressionService.CompressAsync(sourcePaths, progress, ct));
+
+    public Task<CompressionResult> ExtractAsync(
+        string archivePath,
+        string? destinationDirectory,
+        string title) =>
+        RunCompressionAsync(
+            FileOperationType.Extract,
+            Path.GetFileName(archivePath),
+            DescribeDestination(destinationDirectory),
+            title,
+            (progress, ct) => _compressionService.ExtractAsync(archivePath, destinationDirectory, progress, ct));
+
+    /// <summary>
+    /// Runs a compression/extraction as a managed operation. Adapts the CompressionResult to the
+    /// operation's status so it shows up in the File Operation Center like every other operation.
+    /// </summary>
+    private async Task<CompressionResult> RunCompressionAsync(
+        FileOperationType type,
+        string? source,
+        string? destination,
+        string title,
+        Func<IProgress<FileOperationProgress>, CancellationToken, Task<CompressionResult>> execute)
+    {
+        var operation = new FileOperation(type, source, destination, title);
+        operation.PropertyChanged += OnOperationPropertyChanged;
+        Operations.Add(operation);
+        RaiseChanged();
+
+        operation.SetStatus(FileOperationStatus.Running);
+
+        var progress = new Progress<FileOperationProgress>(operation.ApplyProgress);
+        var task = execute(progress, operation.CancellationToken);
+        _runningTasks[operation.Id] = task;
+
+        CompressionResult result;
+        try
+        {
+            result = await task;
+        }
+        catch (OperationCanceledException)
+        {
+            result = CompressionResult.CancelledResult();
+        }
+        catch (Exception ex)
+        {
+            result = CompressionResult.Failed(ex.Message);
+        }
+
+        // Map CompressionResult -> operation status via the shared FinishOperation path.
+        FinishOperation(operation, ToFileOperationResult(result));
+        return result;
+    }
+
+    private static FileOperationResult ToFileOperationResult(CompressionResult r)
+    {
+        if (r.Cancelled) return FileOperationResult.CancelledResult();
+        if (!r.Success) return FileOperationResult.Failed(r.Error ?? "Operation failed.");
+        return FileOperationResult.Ok(r.ItemsProcessed);
+    }
+
     public void CancelOperation(FileOperation operation) => operation.Cancel();
 
     public void CancelAll()
@@ -75,7 +163,11 @@ public sealed class FileOperationManager : IFileOperationManager
     public async Task CancelAllAndWaitAsync()
     {
         CancelAll();
+        await WaitForAllAsync();
+    }
 
+    public async Task WaitForAllAsync()
+    {
         var tasks = _runningTasks.Values.ToArray();
         if (tasks.Length == 0) return;
 

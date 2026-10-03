@@ -9,6 +9,7 @@ public static class SidebarGroupIds
     public const string Favorites = "favorites";
     public const string Locations = "locations";
     public const string Network = "network";
+    public const string Colors = "colors";
 }
 
 /// <summary>

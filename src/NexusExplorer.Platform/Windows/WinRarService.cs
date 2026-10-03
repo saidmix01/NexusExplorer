@@ -89,7 +89,10 @@ public static class WinRarService
         Process.Start(new ProcessStartInfo
         {
             FileName = exe,
-            Arguments = $"x -ibck -o+ \"{archivePath}\" \"{dir}\\\"",
+            // WinRAR wants a trailing backslash on the destination. A single backslash before
+            // the closing quote (\") is parsed as an escaped quote by the CRT, corrupting the
+            // argument — double it so it becomes a literal backslash followed by the quote.
+            Arguments = $"x -ibck -o+ \"{archivePath}\" \"{dir}\\\\\"",
             UseShellExecute = false
         });
     }
@@ -107,7 +110,7 @@ public static class WinRarService
         Process.Start(new ProcessStartInfo
         {
             FileName = exe,
-            Arguments = $"x -ibck -o+ \"{archivePath}\" \"{destDir}\\\"",
+            Arguments = $"x -ibck -o+ \"{archivePath}\" \"{destDir}\\\\\"",
             UseShellExecute = false
         });
     }

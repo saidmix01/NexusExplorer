@@ -350,14 +350,15 @@ public sealed class OperationHistoryService : IOperationHistoryService
     {
         if (entry.IsDirectory)
         {
-            // Re-copy directory from source to destination
-            if (Directory.Exists(entry.SourcePath) && !Directory.Exists(entry.DestinationPath))
+            // Re-copy directory from source to destination, overwriting so the redo
+            // restores the copied result even if a stale destination is present.
+            if (Directory.Exists(entry.SourcePath))
                 CopyDirectory(entry.SourcePath, entry.DestinationPath);
         }
         else
         {
-            if (File.Exists(entry.SourcePath) && !File.Exists(entry.DestinationPath))
-                File.Copy(entry.SourcePath, entry.DestinationPath);
+            if (File.Exists(entry.SourcePath))
+                File.Copy(entry.SourcePath, entry.DestinationPath, overwrite: true);
         }
     }
 
@@ -395,7 +396,7 @@ public sealed class OperationHistoryService : IOperationHistoryService
     {
         Directory.CreateDirectory(destination);
         foreach (var file in Directory.GetFiles(source))
-            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
+            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
         foreach (var dir in Directory.GetDirectories(source))
             CopyDirectory(dir, Path.Combine(destination, Path.GetFileName(dir)));
     }

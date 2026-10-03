@@ -13,14 +13,20 @@
         <Border Grid.Row="0" Background="{DynamicResource NexusDetailsHeaderBackground}"
                 BorderBrush="{DynamicResource NexusDetailsHeaderBorder}"
                 BorderThickness="0,0,0,1" Padding="0,4">
-            <Grid Name="HeaderGrid" ColumnDefinitions="32,400,4,180,4,120">
+            <Grid Name="HeaderGrid" ColumnDefinitions="32,400,4,180,4,120,70">
                 <!-- Icon spacer -->
                 <Panel Grid.Column="0" />
 
-                <!-- Name Header -->
-                <Border Grid.Column="1" Padding="8,0">
-                    <TextBlock Text="Name" FontWeight="SemiBold" FontSize="12"
-                               Foreground="{DynamicResource NexusDetailsHeaderForeground}" VerticalAlignment="Center" />
+                <!-- Name Header (click to sort) -->
+                <Border Grid.Column="1" Padding="8,0" Background="Transparent" Cursor="Hand"
+                        PointerPressed="Header_PointerPressed" Tag="{x:Static models:FileSortMode.Name}">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="Name" FontWeight="SemiBold" FontSize="12"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding SortDirectionGlyph}" FontSize="9" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}"
+                                   IsVisible="{Binding IsSortedByName}" />
+                    </StackPanel>
                 </Border>
 
                 <!-- Splitter between Name and Modified -->
@@ -28,10 +34,16 @@
                               ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
                               Cursor="SizeWestEast" />
 
-                <!-- Modified Header -->
-                <Border Grid.Column="3" Padding="8,0">
-                    <TextBlock Text="Modified" FontWeight="SemiBold" FontSize="12"
-                               Foreground="{DynamicResource NexusDetailsHeaderForeground}" VerticalAlignment="Center" />
+                <!-- Modified Header (click to sort) -->
+                <Border Grid.Column="3" Padding="8,0" Background="Transparent" Cursor="Hand"
+                        PointerPressed="Header_PointerPressed" Tag="{x:Static models:FileSortMode.DateModified}">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="Modified" FontWeight="SemiBold" FontSize="12"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding SortDirectionGlyph}" FontSize="9" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}"
+                                   IsVisible="{Binding IsSortedByModified}" />
+                    </StackPanel>
                 </Border>
 
                 <!-- Splitter between Modified and Size -->
@@ -39,11 +51,28 @@
                               ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
                               Cursor="SizeWestEast" />
 
-                <!-- Size Header -->
-                <Border Grid.Column="5" Padding="8,0">
-                    <TextBlock Text="Size" FontWeight="SemiBold" FontSize="12"
-                               Foreground="{DynamicResource NexusDetailsHeaderForeground}" VerticalAlignment="Center"
-                               TextAlignment="Right" HorizontalAlignment="Stretch" />
+                <!-- Size Header (click to sort) -->
+                <Border Grid.Column="5" Padding="8,0" Background="Transparent" Cursor="Hand"
+                        PointerPressed="Header_PointerPressed" Tag="{x:Static models:FileSortMode.Size}">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <TextBlock Text="Size" FontWeight="SemiBold" FontSize="12"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding SortDirectionGlyph}" FontSize="9" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}"
+                                   IsVisible="{Binding IsSortedBySize}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Color Header (click to sort) -->
+                <Border Grid.Column="6" Padding="8,0" Background="Transparent" Cursor="Hand"
+                        PointerPressed="Header_PointerPressed" Tag="{x:Static models:FileSortMode.Color}">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="Color" FontWeight="SemiBold" FontSize="12"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding SortDirectionGlyph}" FontSize="9" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource NexusDetailsHeaderForeground}"
+                                   IsVisible="{Binding IsSortedByColor}" />
+                    </StackPanel>
                 </Border>
             </Grid>
         </Border>
@@ -56,6 +85,15 @@
                  AutomationProperties.Name="File list - details view"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.Styles>
+                    <!-- Make each row fill the full width with no padding gap, so the whole
+                         selected (shaded) area is the clickable row and its context menu covers
+                         it entirely — right-clicking anywhere on the row opens the menu. -->
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListBox.Styles>
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="models:FileSystemItem">
                         <Panel>
@@ -229,6 +267,14 @@
                                            FontSize="12" Foreground="{DynamicResource NexusFileItemSecondaryText}"
                                            VerticalAlignment="Center"
                                            TextAlignment="Right" Padding="4,0" />
+
+                                <!-- Color column: a dot with the folder's assigned color -->
+                                <Panel Width="{Binding #DetailsRoot.ColorColumnWidth}">
+                                    <Ellipse Width="12" Height="12"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                                             IsVisible="{Binding FolderColor, Converter={x:Static vm:HasFolderColorConverter.Instance}}"
+                                             Fill="{Binding FolderColor, Converter={x:Static vm:FolderColorBrushConverter.Instance}}" />
+                                </Panel>
                                 </StackPanel>
                             </Border>
                         </Panel>

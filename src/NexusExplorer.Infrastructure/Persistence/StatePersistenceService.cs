@@ -35,7 +35,18 @@ public sealed class StatePersistenceService : IStatePersistenceService
         try
         {
             var json = JsonSerializer.Serialize(state, JsonOptions);
-            await File.WriteAllTextAsync(_settingsPath, json, cancellationToken);
+
+            // Write atomically: serialize to a temp file first, then replace the target.
+            // This prevents a truncated/corrupt session-state.json if the process is
+            // interrupted mid-write (which is common — state is saved during shutdown).
+            var tempPath = _settingsPath + ".tmp";
+            await File.WriteAllTextAsync(tempPath, json, cancellationToken);
+
+            if (File.Exists(_settingsPath))
+                File.Replace(tempPath, _settingsPath, null);
+            else
+                File.Move(tempPath, _settingsPath);
+
             _logger.LogDebug("State saved to {Path}", _settingsPath);
         }
         catch (Exception ex)

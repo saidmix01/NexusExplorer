@@ -22,6 +22,11 @@ public interface IFolderColorService
     IReadOnlyList<FolderColorOption> GetPresetColors();
 
     /// <summary>
+    /// Gets a snapshot of all folder-to-color assignments (folder path -> color hex).
+    /// </summary>
+    IReadOnlyDictionary<string, string> GetAllColors();
+
+    /// <summary>
     /// Fired when a folder color changes (path that changed is in EventArgs).
     /// </summary>
     event EventHandler<string>? ColorChanged;

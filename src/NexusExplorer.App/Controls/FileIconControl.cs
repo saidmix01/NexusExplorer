@@ -113,9 +113,12 @@ public class FileIconControl : Panel
         // Apply reduced opacity for hidden files
         Opacity = item.IsHidden ? 0.55 : 1.0;
 
-        // Hide all first
+        // Hide all first. Also drop the previous thumbnail reference: the cache owns that
+        // Bitmap and may dispose it on eviction/staleness, so a recycled control must not keep
+        // rendering it (that would throw ObjectDisposedException during render).
         _symbolIcon.IsVisible = false;
         _thumbnailImage.IsVisible = false;
+        _thumbnailImage.Source = null;
         _folderImage.IsVisible = false;
 
         // Folders get custom colored icon

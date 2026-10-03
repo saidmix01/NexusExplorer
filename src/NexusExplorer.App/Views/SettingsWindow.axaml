@@ -1,10 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NexusExplorer.App.ViewModels"
+        xmlns:models="using:NexusExplorer.Core.Models"
         x:Class="NexusExplorer.App.Views.SettingsWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Settings"
-        Width="540" Height="380"
+        Width="560" Height="640"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
         Background="{DynamicResource NexusBackground}">
@@ -34,8 +35,49 @@
         </Style>
     </Window.Styles>
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24" Spacing="16">
         <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" />
+
+        <!-- Appearance -->
+        <TextBlock Text="Appearance" FontSize="16" FontWeight="SemiBold" />
+        <Border Classes="card">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Theme" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock Text="Choose how Nexus Explorer looks." Classes="muted" />
+                <StackPanel Orientation="Horizontal" Spacing="18">
+                    <RadioButton Content="Light" GroupName="Theme"
+                                 IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.Light}, Mode=TwoWay}" />
+                    <RadioButton Content="Dark" GroupName="Theme"
+                                 IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.Dark}, Mode=TwoWay}" />
+                    <RadioButton Content="System" GroupName="Theme"
+                                 IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.System}, Mode=TwoWay}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Default file manager -->
+        <TextBlock Text="Default File Manager" FontSize="16" FontWeight="SemiBold" />
+        <Border Classes="card">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Make folders and drives open in Nexus Explorer when you double-click them, and open Nexus with Win + E. You can restore the built-in Windows Explorer at any time."
+                           Classes="muted" TextWrapping="Wrap" />
+
+                <TextBlock Text="Nexus Explorer is your default file manager."
+                           FontWeight="SemiBold" FontSize="13" Foreground="#4CAF50"
+                           IsVisible="{Binding IsDefaultExplorer}" />
+                <TextBlock Text="Nexus Explorer is not the default file manager."
+                           Classes="muted" IsVisible="{Binding !IsDefaultExplorer}" />
+
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="Set as Default Explorer" Command="{Binding SetAsDefaultExplorerCommand}" />
+                    <Button Content="Restore Windows Explorer" Command="{Binding RestoreDefaultExplorerCommand}" />
+                </StackPanel>
+
+                <TextBlock Text="Note: Windows does not allow fully replacing the taskbar's File Explorer button; this covers folder/drive double-click and Win + E."
+                           Classes="muted" TextWrapping="Wrap" FontSize="11" />
+            </StackPanel>
+        </Border>
 
         <StackPanel Spacing="4">
             <TextBlock Text="Keyboard Shortcuts" FontSize="16" FontWeight="SemiBold" />
@@ -71,4 +113,5 @@
 
         <Button Content="Close" HorizontalAlignment="Right" Click="Close_Click" MinWidth="90" />
     </StackPanel>
+    </ScrollViewer>
 </Window>

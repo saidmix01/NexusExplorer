@@ -23,7 +23,8 @@ public sealed class NavigationService : INavigationService
     public bool CanGoBack => _backStack.Count > 0;
     public bool CanGoForward => _forwardStack.Count > 0;
     public bool CanGoUp => !string.IsNullOrEmpty(_currentPath)
-                           && Path.GetDirectoryName(_currentPath) is not null;
+                           && !Models.VirtualPaths.IsVirtual(_currentPath)
+                           && !string.IsNullOrEmpty(Path.GetDirectoryName(_currentPath));
 
     public event EventHandler<string>? Navigated;
 

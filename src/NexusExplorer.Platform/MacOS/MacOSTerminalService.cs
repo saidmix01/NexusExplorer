@@ -10,12 +10,13 @@ public sealed class MacOSTerminalService : ITerminalService
 {
     public Task LaunchAsync(string workingDirectory, CancellationToken cancellationToken = default)
     {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "open",
-            Arguments = $"-a Terminal \"{workingDirectory}\"",
-            UseShellExecute = false
-        });
+        // With UseShellExecute=false, .NET on Unix does not strip quotes; use ArgumentList so
+        // working directories with spaces are passed as a single argument.
+        var psi = new ProcessStartInfo { FileName = "open", UseShellExecute = false };
+        psi.ArgumentList.Add("-a");
+        psi.ArgumentList.Add("Terminal");
+        psi.ArgumentList.Add(workingDirectory);
+        Process.Start(psi);
         return Task.CompletedTask;
     }
 }

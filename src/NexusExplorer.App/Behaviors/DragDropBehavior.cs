@@ -110,7 +110,10 @@ public static class DragDropBehavior
             {
                 try
                 {
-                    var uri = new Uri("file:///" + path.Replace('\\', '/').TrimStart('/'));
+                    // Build the file URI from the absolute path directly. This correctly handles
+                    // UNC paths (\\server\share) and escapes special characters (#, %, spaces),
+                    // unlike manual "file:///" string concatenation.
+                    var uri = new Uri(path);
                     if (System.IO.Directory.Exists(path))
                     {
                         var f = await storageProvider.TryGetFolderFromPathAsync(uri);

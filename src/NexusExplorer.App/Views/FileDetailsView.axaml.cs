@@ -23,6 +23,9 @@ public partial class FileDetailsView : UserControl
     public static readonly StyledProperty<double> SizeColumnWidthProperty =
         AvaloniaProperty.Register<FileDetailsView, double>(nameof(SizeColumnWidth), 120);
 
+    public static readonly StyledProperty<double> ColorColumnWidthProperty =
+        AvaloniaProperty.Register<FileDetailsView, double>(nameof(ColorColumnWidth), 70);
+
     public double IconColumnWidth
     {
         get => GetValue(IconColumnWidthProperty);
@@ -47,6 +50,12 @@ public partial class FileDetailsView : UserControl
         set => SetValue(SizeColumnWidthProperty, value);
     }
 
+    public double ColorColumnWidth
+    {
+        get => GetValue(ColorColumnWidthProperty);
+        set => SetValue(ColorColumnWidthProperty, value);
+    }
+
     // Minimum widths for each data column
     private const double MinNameWidth = 150;
     private const double MinModifiedWidth = 140;
@@ -66,6 +75,15 @@ public partial class FileDetailsView : UserControl
     {
         if (sender is MenuItem { DataContext: SidebarGroup group } && DataContext is MainWindowViewModel vm)
             vm.AddToGroupCommand.Execute(group);
+    }
+
+    private void Header_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control { Tag: FileSortMode mode } && DataContext is MainWindowViewModel vm)
+        {
+            vm.SortByColumnCommand.Execute(mode);
+            e.Handled = true;
+        }
     }
 
     protected override void OnLoaded(RoutedEventArgs e)
@@ -108,6 +126,7 @@ public partial class FileDetailsView : UserControl
         var nameW = _headerGrid.ColumnDefinitions[1].ActualWidth;
         var modifiedW = _headerGrid.ColumnDefinitions[3].ActualWidth;
         var sizeW = _headerGrid.ColumnDefinitions[5].ActualWidth;
+        var colorW = _headerGrid.ColumnDefinitions[6].ActualWidth;
 
         // Only update if we have valid widths
         if (nameW <= 0 && modifiedW <= 0 && sizeW <= 0) return;
@@ -120,6 +139,8 @@ public partial class FileDetailsView : UserControl
             ModifiedColumnWidth = modifiedW;
         if (Math.Abs(SizeColumnWidth - sizeW) > 0.5)
             SizeColumnWidth = sizeW;
+        if (Math.Abs(ColorColumnWidth - colorW) > 0.5)
+            ColorColumnWidth = colorW;
     }
 
     private void RenameTextBox_AttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

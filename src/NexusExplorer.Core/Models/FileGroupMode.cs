@@ -6,5 +6,6 @@ public enum FileGroupMode
     Name,
     DateModified,
     Type,
-    Size
+    Size,
+    Color
 }

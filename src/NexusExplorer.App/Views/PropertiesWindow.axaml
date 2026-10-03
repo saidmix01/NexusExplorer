@@ -1,129 +1,271 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NexusExplorer.App.ViewModels"
+        xmlns:models="using:NexusExplorer.Core.Abstractions"
         x:Class="NexusExplorer.App.Views.PropertiesWindow"
         x:DataType="vm:PropertiesViewModel"
         Title="{Binding Title}"
-        Width="420" Height="520"
-        MinWidth="360" MinHeight="400"
+        Width="620" Height="580"
+        MinWidth="520" MinHeight="440"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
         Background="{DynamicResource NexusDialogBackground}">
 
-    <Grid RowDefinitions="*,Auto">
-        <!-- Scrollable content -->
-        <ScrollViewer Grid.Row="0" Padding="24,20">
-            <StackPanel Spacing="16">
+    <Window.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.value">
+            <Setter Property="Foreground" Value="{DynamicResource NexusText}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+        </Style>
 
-                <!-- Header: Icon + Name -->
-                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,8">
+        <!-- Side navigation tabs: fully custom template so the look doesn't depend on
+             theme-internal template parts (modern vertical pills). -->
+        <Style Selector="TabControl.side > TabItem">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Width" Value="150" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Pill" Margin="8,2" Padding="14,10" CornerRadius="8"
+                            Background="Transparent">
+                        <ContentPresenter Content="{TemplateBinding Header}"
+                                          HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="TabControl.side > TabItem:pointerover /template/ Border#Pill">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="TabControl.side > TabItem:selected /template/ Border#Pill">
+            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+        </Style>
+        <Style Selector="TabControl.side > TabItem:selected">
+            <Setter Property="Foreground" Value="{DynamicResource NexusText}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource NexusSurface}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header: Icon + Name + type -->
+        <Border Grid.Row="0" Padding="20,18,20,16"
+                Background="{DynamicResource NexusSurface}"
+                BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+                <Border Width="52" Height="52" CornerRadius="12"
+                        Background="{DynamicResource NexusSelection}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock Text="{Binding IsDirectory, Converter={x:Static vm:PropertiesIconConverter.Instance}}"
-                               FontSize="28" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding ItemName}" FontSize="16" FontWeight="SemiBold"
-                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320"
-                               Foreground="{DynamicResource NexusText}" />
-                </StackPanel>
-
-                <Separator Background="{DynamicResource NexusBorderLight}" Height="1" />
-
-                <!-- Error state -->
-                <Border IsVisible="{Binding HasError}" Background="#FFF0F0" CornerRadius="6" Padding="12" BorderBrush="#FFCCCC" BorderThickness="1">
-                    <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource NexusDangerBackground}" TextWrapping="Wrap" FontSize="12" />
+                               FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-
-                <!-- General Section -->
-                <TextBlock Text="General" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource NexusTextPrimary}" />
-
-                <!-- Type -->
-                <Grid ColumnDefinitions="110,*">
-                    <TextBlock Grid.Column="0" Text="Type" Foreground="{DynamicResource NexusTextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding TypeDescription}" FontSize="12" VerticalAlignment="Center"
+                <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{Binding ItemName}" FontSize="17" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" MaxWidth="440"
                                Foreground="{DynamicResource NexusText}" />
-                </Grid>
-
-                <!-- Location -->
-                <Grid ColumnDefinitions="110,*" IsVisible="{Binding IsSingleItem}">
-                    <TextBlock Grid.Column="0" Text="Location" Foreground="{DynamicResource NexusTextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding Location}" FontSize="12" VerticalAlignment="Center"
-                               Foreground="{DynamicResource NexusText}"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Location}" />
-                </Grid>
-
-                <!-- Size -->
-                <Grid ColumnDefinitions="110,*">
-                    <TextBlock Grid.Column="0" Text="Size" Foreground="{DynamicResource NexusTextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{Binding SizeText}" FontSize="12" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource NexusText}" />
-                        <ProgressBar IsVisible="{Binding IsCalculatingSize}" IsIndeterminate="True"
-                                     Width="60" Height="3" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Grid>
-
-                <!-- Contains (folders / multi) -->
-                <Grid ColumnDefinitions="110,*" IsVisible="{Binding ContainsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                    <TextBlock Grid.Column="0" Text="Contains" Foreground="{DynamicResource NexusTextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding ContainsText}" FontSize="12" VerticalAlignment="Center"
-                               Foreground="{DynamicResource NexusText}" />
-                </Grid>
-
-                <Separator Background="{DynamicResource NexusBorderLight}" Height="1" IsVisible="{Binding IsSingleItem}" />
-
-                <!-- Dates Section (single item only) -->
-                <StackPanel Spacing="8" IsVisible="{Binding IsSingleItem}">
-                    <TextBlock Text="Dates" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource NexusTextPrimary}" />
-
-                    <Grid ColumnDefinitions="110,*">
-                        <TextBlock Grid.Column="0" Text="Created" Foreground="{DynamicResource NexusTextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Text="{Binding CreatedText}" FontSize="12" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource NexusText}" />
-                    </Grid>
-
-                    <Grid ColumnDefinitions="110,*">
-                        <TextBlock Grid.Column="0" Text="Modified" Foreground="{DynamicResource NexusTextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Text="{Binding ModifiedText}" FontSize="12" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource NexusText}" />
-                    </Grid>
-
-                    <Grid ColumnDefinitions="110,*">
-                        <TextBlock Grid.Column="0" Text="Last accessed" Foreground="{DynamicResource NexusTextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Text="{Binding AccessedText}" FontSize="12" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource NexusText}" />
-                    </Grid>
+                    <TextBlock Text="{Binding TypeDescription}" FontSize="12"
+                               Foreground="{DynamicResource NexusTextSecondary}" />
                 </StackPanel>
-
-                <Separator Background="{DynamicResource NexusBorderLight}" Height="1" />
-
-                <!-- Attributes Section -->
-                <StackPanel Spacing="8">
-                    <TextBlock Text="Attributes" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource NexusTextPrimary}" />
-
-                    <CheckBox Content="Read-only" IsChecked="{Binding IsReadOnly}" FontSize="12" />
-                    <CheckBox Content="Hidden" IsChecked="{Binding IsHidden}" FontSize="12" />
-                </StackPanel>
-
             </StackPanel>
-        </ScrollViewer>
+        </Border>
+
+        <!-- Side-tab navigation: left rail + content -->
+        <Grid Grid.Row="1" ColumnDefinitions="166,*">
+            <Border Grid.Column="0" Background="{DynamicResource NexusSurface}"
+                    BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="0,0,1,0" />
+        <TabControl Grid.ColumnSpan="2" Classes="side" TabStripPlacement="Left" Padding="0"
+                    Background="Transparent">
+
+            <!-- ============ GENERAL ============ -->
+            <TabItem Header="General">
+                <ScrollViewer Padding="20,16">
+                    <StackPanel Spacing="14">
+
+                        <Border IsVisible="{Binding HasError}" Background="#22FF5555" CornerRadius="8" Padding="12">
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource NexusDangerBackground}"
+                                       TextWrapping="Wrap" FontSize="12" />
+                        </Border>
+
+                        <Border Classes="card">
+                            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Type" Classes="label" />
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TypeDescription}" Classes="value" />
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Opens with" Classes="label"
+                                           IsVisible="{Binding OpensWithText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OpensWithText}" Classes="value"
+                                           IsVisible="{Binding OpensWithText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Location" Classes="label"
+                                           IsVisible="{Binding IsSingleItem}" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Location}" Classes="value"
+                                           IsVisible="{Binding IsSingleItem}"
+                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Location}" />
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Owner" Classes="label"
+                                           IsVisible="{Binding OwnerText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OwnerText}" Classes="value"
+                                           IsVisible="{Binding OwnerText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="card">
+                            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" Classes="label" />
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding SizeText}" Classes="value" />
+                                    <ProgressBar IsVisible="{Binding IsCalculatingSize}" IsIndeterminate="True"
+                                                 Width="60" Height="3" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Size on disk" Classes="label"
+                                           IsVisible="{Binding SizeOnDiskText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SizeOnDiskText}" Classes="value"
+                                           IsVisible="{Binding SizeOnDiskText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Contains" Classes="label"
+                                           IsVisible="{Binding ContainsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ContainsText}" Classes="value"
+                                           IsVisible="{Binding ContainsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="card" IsVisible="{Binding IsSingleItem}">
+                            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Created" Classes="label" />
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CreatedText}" Classes="value" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Modified" Classes="label" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ModifiedText}" Classes="value" />
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Last accessed" Classes="label" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AccessedText}" Classes="value" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="card">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="ATTRIBUTES" Classes="section" />
+                                <StackPanel Orientation="Horizontal" Spacing="24">
+                                    <CheckBox Content="Read-only" IsChecked="{Binding IsReadOnly}" FontSize="12" />
+                                    <CheckBox Content="Hidden" IsChecked="{Binding IsHidden}" FontSize="12" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============ DETAILS ============ -->
+            <TabItem Header="Details" IsVisible="{Binding IsSingleItem}">
+                <Grid>
+                    <ProgressBar IsVisible="{Binding IsLoadingDetails}" IsIndeterminate="True"
+                                 Height="3" VerticalAlignment="Top" Margin="20,4" />
+                    <ScrollViewer Padding="20,16">
+                        <ItemsControl ItemsSource="{Binding DetailGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DetailGroupViewModel">
+                                    <Border Classes="card" Margin="0,0,0,12">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="{Binding Name}" Classes="section" />
+                                            <ItemsControl ItemsSource="{Binding Properties}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:DetailProperty">
+                                                        <Grid ColumnDefinitions="150,*" ColumnSpacing="10" Margin="0,3">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="label" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="value"
+                                                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Value}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <!-- ============ SECURITY ============ -->
+            <TabItem Header="Security" IsVisible="{Binding IsSingleItem}">
+                <Grid RowDefinitions="Auto,Auto,*" Margin="20,16">
+                    <ProgressBar Grid.Row="0" IsVisible="{Binding IsLoadingSecurity}" IsIndeterminate="True" Height="3" Margin="0,0,0,8" />
+
+                    <Grid Grid.Row="1" ColumnDefinitions="120,*" ColumnSpacing="10" Margin="0,0,0,10"
+                          IsVisible="{Binding SecurityOwnerText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Grid.Column="0" Text="Owner" Classes="label" />
+                        <TextBlock Grid.Column="1" Text="{Binding SecurityOwnerText}" Classes="value" />
+                    </Grid>
+
+                    <Border Grid.Row="2" Classes="card" Padding="0">
+                        <Grid RowDefinitions="Auto,*">
+                            <Grid Grid.Row="0" ColumnDefinitions="*,2*,Auto" Height="32">
+                                <TextBlock Grid.Column="0" Text="NAME" Classes="section" Margin="14,0" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="PERMISSIONS" Classes="section" Margin="10,0" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="ACCESS" Classes="section" Margin="14,0" VerticalAlignment="Center" />
+                            </Grid>
+                            <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom"
+                                    Background="{DynamicResource NexusBorderLight}" />
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding SecurityEntries}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:SecurityEntry">
+                                            <Grid ColumnDefinitions="*,2*,Auto" Margin="0,6" ColumnSpacing="4">
+                                                <TextBlock Grid.Column="0" Text="{Binding Principal}" Classes="value"
+                                                           Margin="14,0" TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding Principal}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Permissions}" Classes="value" Margin="10,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding AccessType}" Classes="value" Margin="14,0" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Grid.Row="2" Text="{Binding SecurityNote}"
+                               IsVisible="{Binding SecurityNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               Classes="label" TextWrapping="Wrap" Margin="4,12" VerticalAlignment="Top" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+        </Grid>
 
         <!-- Bottom buttons -->
-        <Border Grid.Row="1" BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="0,1,0,0" Padding="24,12">
+        <Border Grid.Row="2" BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="0,1,0,0" Padding="20,12"
+                Background="{DynamicResource NexusSurface}">
             <Grid ColumnDefinitions="Auto,*,Auto">
-                <!-- Left: utility buttons -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                     <Button Content="Copy Path" Command="{Binding CopyPathCommand}"
-                            IsVisible="{Binding IsSingleItem}"
-                            Padding="12,6" FontSize="12" />
+                            IsVisible="{Binding IsSingleItem}" Padding="12,6" FontSize="12" />
                     <Button Content="Open Location" Command="{Binding OpenLocationCommand}"
-                            IsVisible="{Binding IsSingleItem}"
-                            Padding="12,6" FontSize="12" />
+                            IsVisible="{Binding IsSingleItem}" Padding="12,6" FontSize="12" />
                 </StackPanel>
-                <!-- Right: Apply / Close -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
                     <Button Content="Apply" Command="{Binding ApplyAttributesCommand}"
-                            IsVisible="{Binding AttributesChanged}"
-                            Padding="16,6" FontSize="12" />
-                    <Button Content="Close" Command="{Binding CloseCommand}"
-                            Padding="16,6" FontSize="12" />
+                            IsVisible="{Binding AttributesChanged}" Padding="16,6" FontSize="12" />
+                    <Button Content="Close" Command="{Binding CloseCommand}" Padding="16,6" FontSize="12"
+                            Classes="accent" />
                 </StackPanel>
             </Grid>
         </Border>

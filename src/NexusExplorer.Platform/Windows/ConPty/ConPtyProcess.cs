@@ -92,7 +92,7 @@ internal sealed class ConPtyProcess : IDisposable
         var size = IntPtr.Zero;
         NativeMethods.InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref size);
 
-        _attributeList = Marshal.AllocHGlobal(size.ToInt32());
+        _attributeList = Marshal.AllocHGlobal(size);
         if (!NativeMethods.InitializeProcThreadAttributeList(_attributeList, 1, 0, ref size))
             throw new InvalidOperationException($"InitializeProcThreadAttributeList failed: {Marshal.GetLastWin32Error()}");
 

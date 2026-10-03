@@ -23,4 +23,11 @@ public sealed class FileSystemItem
     // --- Grouping ---
     public bool IsGroupHeader { get; init; }
     public string? GroupName { get; init; }
+
+    /// <summary>
+    /// Custom folder color hex (e.g. "#4A9FDE") assigned to this folder, or null if none.
+    /// Populated by the view model at load time from the folder-color service so the UI can
+    /// show a color swatch and sort/group by color without querying the service per item.
+    /// </summary>
+    public string? FolderColor { get; init; }
 }

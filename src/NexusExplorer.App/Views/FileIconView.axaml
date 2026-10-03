@@ -19,16 +19,20 @@
             <Setter Property="Background" Value="{DynamicResource NexusHover}" />
             <Setter Property="CornerRadius" Value="6" />
         </Style>
+        <!-- Selection in icon view uses only a stronger fill (no border). A border on the
+             ContentPresenter would enlarge the ListBoxItem by 2px around its fixed-width child
+             and reflow the WrapPanel, making the tile appear to resize on selection. Background
+             alone does not affect layout, so the tile size stays constant. -->
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+            <Setter Property="Background" Value="{DynamicResource NexusIconSelection}" />
             <Setter Property="CornerRadius" Value="6" />
         </Style>
         <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource NexusSelectionHover}" />
+            <Setter Property="Background" Value="{DynamicResource NexusIconSelectionHover}" />
             <Setter Property="CornerRadius" Value="6" />
         </Style>
         <Style Selector="ListBoxItem:selected:focus /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource NexusSelectionFocused}" />
+            <Setter Property="Background" Value="{DynamicResource NexusIconSelectionHover}" />
             <Setter Property="CornerRadius" Value="6" />
         </Style>
     </UserControl.Styles>

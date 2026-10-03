@@ -82,6 +82,10 @@
     <SolidColorBrush x:Key="NexusSelection" Color="#1A3B8DD4" />
     <SolidColorBrush x:Key="NexusSelectionHover" Color="#253B8DD4" />
     <SolidColorBrush x:Key="NexusSelectionFocused" Color="#303B8DD4" />
+    <!-- Stronger selection fill for the icon (grid) view where the faint tint is hard to see.
+         Fill only (no border) so selecting never changes the tile size. -->
+    <SolidColorBrush x:Key="NexusIconSelection" Color="#553B8DD4" />
+    <SolidColorBrush x:Key="NexusIconSelectionHover" Color="#6B3B8DD4" />
     <SolidColorBrush x:Key="NexusHover" Color="#0A000000" />
     <SolidColorBrush x:Key="NexusFocusBorder" Color="#5A9BDE" />
 

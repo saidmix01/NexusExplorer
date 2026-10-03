@@ -29,7 +29,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICompressionService, CompressionService>();
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<ISearchService, SearchService>();
-        services.AddSingleton<IFilePropertiesService, FilePropertiesService>();
+        // FilePropertiesService optionally consumes a platform IShellMetadataProvider (Windows).
+        // Resolve it with GetService so the absence of a provider (Linux/macOS) is fine.
+        services.AddSingleton<IFilePropertiesService>(sp =>
+            new FilePropertiesService(sp.GetService<IShellMetadataProvider>()));
         services.AddSingleton<IOperationHistoryService, OperationHistoryService>();
         services.AddSingleton<IStatePersistenceService, StatePersistenceService>();
         services.AddSingleton<IFolderColorService, NexusExplorer.Infrastructure.Services.FolderColorService>();

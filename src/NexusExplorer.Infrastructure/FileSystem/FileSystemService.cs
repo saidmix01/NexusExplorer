@@ -163,7 +163,11 @@ public sealed class FileSystemService : IFileSystemService
 
     internal static FileSystemItem MapFile(FileInfo file) => new()
     {
-        Name = file.Name,
+        // Windows always hides the ".lnk" extension for shortcuts, even when other extensions
+        // are shown. Strip it from the display name only; Path and Extension stay intact.
+        Name = string.Equals(file.Extension, ".lnk", StringComparison.OrdinalIgnoreCase)
+            ? Path.GetFileNameWithoutExtension(file.Name)
+            : file.Name,
         Path = file.FullName,
         Type = file.Attributes.HasFlag(FileAttributes.ReparsePoint)
             ? FileSystemItemType.SymbolicLink

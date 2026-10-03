@@ -223,7 +223,7 @@ public sealed class WindowsSendToService : ISendToService
                     while ((b = reader.ReadByte()) != 0)
                         pathBytes.Add(b);
 
-                    var localPath = System.Text.Encoding.Default.GetString(pathBytes.ToArray());
+                    var localPath = DecodeAnsi(pathBytes.ToArray());
                     if (!string.IsNullOrEmpty(localPath))
                         return localPath;
                 }
@@ -236,4 +236,12 @@ public sealed class WindowsSendToService : ISendToService
             return null;
         }
     }
+
+    /// <summary>
+    /// Decodes the ANSI LocalBasePath of a .lnk. On modern .NET, Encoding.Default is UTF-8
+    /// (not the system ANSI code page), which mis-decodes non-ASCII bytes in the ANSI path.
+    /// Latin1 is built in and maps every byte 1:1, which round-trips ASCII correctly and
+    /// avoids the UTF-8 mis-decoding without pulling in the code-pages package.
+    /// </summary>
+    private static string DecodeAnsi(byte[] bytes) => System.Text.Encoding.Latin1.GetString(bytes);
 }

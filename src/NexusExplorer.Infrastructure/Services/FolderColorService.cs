@@ -54,6 +54,9 @@ public sealed class FolderColorService : IFolderColorService
 
     public IReadOnlyList<FolderColorOption> GetPresetColors() => Presets;
 
+    public IReadOnlyDictionary<string, string> GetAllColors()
+        => new Dictionary<string, string>(_colors, StringComparer.OrdinalIgnoreCase);
+
     private void Load()
     {
         try
@@ -77,7 +80,15 @@ public sealed class FolderColorService : IFolderColorService
         try
         {
             var json = JsonSerializer.Serialize(_colors, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
+
+            // Atomic write: temp file then replace, so an interrupted save can't corrupt the file.
+            var tempPath = _filePath + ".tmp";
+            File.WriteAllText(tempPath, json);
+
+            if (File.Exists(_filePath))
+                File.Replace(tempPath, _filePath, null);
+            else
+                File.Move(tempPath, _filePath);
         }
         catch
         {

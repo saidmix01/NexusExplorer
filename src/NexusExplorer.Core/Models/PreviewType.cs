@@ -8,5 +8,6 @@ public enum PreviewType
     None,
     Image,
     Text,
+    Folder,
     Unsupported
 }

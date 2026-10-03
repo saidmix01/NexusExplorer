@@ -114,7 +114,10 @@ public partial class TerminalViewModel : ObservableObject
             HasError = false;
             ErrorMessage = null;
 
+            // Detach first to avoid double-subscription (duplicated output) when re-attaching.
+            _currentSession.OutputReceived -= OnOutputReceived;
             _currentSession.OutputReceived += OnOutputReceived;
+            _currentSession.ProcessExited -= OnProcessExited;
             _currentSession.ProcessExited += OnProcessExited;
 
             if (tab.TerminalError is not null)
@@ -150,7 +153,10 @@ public partial class TerminalViewModel : ObservableObject
         if (_currentTab.TerminalSession is not null && _currentTab.TerminalSession.IsRunning)
         {
             _currentSession = _currentTab.TerminalSession;
+            // Detach first to avoid double-subscription (duplicated output).
+            _currentSession.OutputReceived -= OnOutputReceived;
             _currentSession.OutputReceived += OnOutputReceived;
+            _currentSession.ProcessExited -= OnProcessExited;
             _currentSession.ProcessExited += OnProcessExited;
             IsSessionActive = true;
             return;

@@ -31,6 +31,36 @@ public sealed class FolderColorBrushConverter : IValueConverter
 }
 
 /// <summary>
+/// Returns true when a folder color hex string is present (non-null, non-empty).
+/// Used to show/hide the color swatch in the details view.
+/// </summary>
+public sealed class HasFolderColorConverter : IValueConverter
+{
+    public static readonly HasFolderColorConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is string hex && !string.IsNullOrEmpty(hex);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Returns true when the value is null or an empty string. Used to show the default sidebar
+/// icon for ordinary items (those without a color swatch).
+/// </summary>
+public sealed class IsNullConverter : IValueConverter
+{
+    public static readonly IsNullConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is null || (value is string s && string.IsNullOrEmpty(s));
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
 /// Returns a tab border brush from the tab's FolderColor and IsActive state.
 /// Folder color takes precedence; otherwise the active/inactive theme border is used.
 /// Inputs: [0] FolderColor (string?), [1] IsActive (bool).

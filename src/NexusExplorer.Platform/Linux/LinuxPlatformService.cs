@@ -17,36 +17,28 @@ public sealed class LinuxPlatformService : IPlatformService
 
     public Task OpenWithDefaultAsync(string path, CancellationToken cancellationToken = default)
     {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "xdg-open",
-            Arguments = $"\"{path}\"",
-            UseShellExecute = false
-        });
+        // With UseShellExecute=false, .NET on Unix does not strip quotes; pass args via ArgumentList.
+        var psi = new ProcessStartInfo { FileName = "xdg-open", UseShellExecute = false };
+        psi.ArgumentList.Add(path);
+        Process.Start(psi);
         return Task.CompletedTask;
     }
 
     public Task OpenWithDialogAsync(string path, CancellationToken cancellationToken = default)
     {
         // On Linux, xdg-open is the best we can do; some DEs have mimeopen --ask
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "xdg-open",
-            Arguments = $"\"{path}\"",
-            UseShellExecute = false
-        });
+        var psi = new ProcessStartInfo { FileName = "xdg-open", UseShellExecute = false };
+        psi.ArgumentList.Add(path);
+        Process.Start(psi);
         return Task.CompletedTask;
     }
 
     public Task ShowInSystemExplorerAsync(string path, CancellationToken cancellationToken = default)
     {
         var dir = File.Exists(path) ? Path.GetDirectoryName(path) ?? path : path;
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "xdg-open",
-            Arguments = $"\"{dir}\"",
-            UseShellExecute = false
-        });
+        var psi = new ProcessStartInfo { FileName = "xdg-open", UseShellExecute = false };
+        psi.ArgumentList.Add(dir);
+        Process.Start(psi);
         return Task.CompletedTask;
     }
 
