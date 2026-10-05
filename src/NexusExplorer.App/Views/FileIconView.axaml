@@ -75,9 +75,11 @@
                             PointerPressed="Item_PointerPressed">
                         <Border.ContextMenu>
                             <ContextMenu x:CompileBindings="False">
-                                <!-- Recycle Bin: restore -->
+                                <!-- Recycle Bin: restore / empty -->
                                 <MenuItem Header="Restore" Command="{Binding $parent[UserControl].DataContext.RestoreSelectedCommand}"
                                           IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowUndo" /></MenuItem.Icon></MenuItem>
+                                <MenuItem Header="Empty Recycle Bin" Command="{Binding $parent[UserControl].DataContext.EmptyRecycleBinCommand}"
+                                          IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon></MenuItem>
                                 <Separator IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}" />
                             
                                 <!-- ===== 1. OPEN ===== -->
@@ -256,16 +258,18 @@
                                        HorizontalAlignment="Center"
                                        TextTrimming="CharacterEllipsis" />
 
-                            <!-- Drive usage bar (only for Drive items) -->
+                            <!-- Drive usage (only for Drive items): rounded bar colored by fill level
+                                 + a clear "X free of Y" label. -->
                             <StackPanel IsVisible="{Binding Type, Converter={x:Static vm:IsDriveTypeConverter.Instance}}"
-                                        Spacing="2" HorizontalAlignment="Stretch" Margin="2,2,2,0">
+                                        Spacing="3" HorizontalAlignment="Stretch" Margin="4,4,4,0">
                                 <ProgressBar Value="{Binding UsagePercent}" Minimum="0" Maximum="100"
-                                             Height="4"
-                                             Foreground="{DynamicResource NexusDriveUsageForeground}"
+                                             Height="6" CornerRadius="3"
+                                             Foreground="{Binding Converter={x:Static vm:DriveUsageBrushConverter.Instance}}"
                                              Background="{DynamicResource NexusDriveUsageBackground}" />
                                 <TextBlock Text="{Binding Converter={x:Static vm:DriveSpaceInfoConverter.Instance}}"
-                                           FontSize="9" Foreground="{DynamicResource NexusDriveUsageText}"
-                                           TextAlignment="Center" HorizontalAlignment="Center" />
+                                           FontSize="9.5" Foreground="{DynamicResource NexusDriveUsageText}"
+                                           TextAlignment="Center" HorizontalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
                             </StackPanel>
 
                             <!-- Name (rename mode) -->

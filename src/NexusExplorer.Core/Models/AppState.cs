@@ -69,6 +69,9 @@ public sealed class UserPreferences
 
     /// <summary>The "Open Nexus" global shortcut, e.g. "Ctrl+Alt+E".</summary>
     public string GlobalHotkeyShortcut { get; set; } = "Ctrl+Alt+E";
+
+    /// <summary>Whether Nexus Explorer launches automatically when the user signs in to Windows.</summary>
+    public bool StartWithWindows { get; set; }
 }
 
 /// <summary>

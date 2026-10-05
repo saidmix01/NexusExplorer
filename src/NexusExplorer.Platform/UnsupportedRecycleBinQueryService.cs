@@ -16,6 +16,9 @@ public sealed class UnsupportedRecycleBinQueryService : IRecycleBinQueryService
     public Task<bool> RestoreAsync(string originalPath, CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 
+    public Task<bool> DeleteAsync(string originalPath, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
     public Task<bool> EmptyAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 }

@@ -123,6 +123,21 @@ public sealed class IsFavoriteKindConverter : IValueConverter
 }
 
 /// <summary>
+/// Returns true when a sidebar item's Path is the Recycle Bin virtual path.
+/// Used to show the "Empty Recycle Bin" entry on the sidebar item's context menu.
+/// </summary>
+public sealed class IsRecycleBinPathConverter : IValueConverter
+{
+    public static readonly IsRecycleBinPathConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is string s && string.Equals(s, VirtualPaths.RecycleBin, StringComparison.OrdinalIgnoreCase);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
 /// Returns true if the NavigationItemKind is Custom (an item inside a user-created group).
 /// Used for showing/hiding the "Remove from Group" context menu item.
 /// </summary>

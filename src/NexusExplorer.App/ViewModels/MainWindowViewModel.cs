@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Runtime.Versioning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -324,6 +325,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private bool _isPermanentDelete;
     private bool _isEmptyRecycleBin;
+    private bool _isDeleteFromBin;
 
     partial void OnCurrentPathChanged(string value)
     {
@@ -703,6 +705,10 @@ public partial class MainWindowViewModel : ObservableObject
                     GlobalHotkeyShortcut = state.Preferences.GlobalHotkeyShortcut;
                 GlobalHotkeyEnabled = state.Preferences.GlobalHotkeyEnabled;
 
+                // Reflect the real OS startup state (registry is the source of truth).
+                StartWithWindows = OperatingSystem.IsWindows()
+                    && NexusExplorer.Platform.Windows.StartupService.IsEnabled();
+
                 // Restore tabs
                 for (int i = 0; i < state.Tabs.Count; i++)
                 {
@@ -807,7 +813,8 @@ public partial class MainWindowViewModel : ObservableObject
                 PinnedFavorites = _pinnedFavorites.ToList(),
                 Theme = CurrentTheme,
                 GlobalHotkeyEnabled = GlobalHotkeyEnabled,
-                GlobalHotkeyShortcut = GlobalHotkeyShortcut
+                GlobalHotkeyShortcut = GlobalHotkeyShortcut,
+                StartWithWindows = StartWithWindows
             },
             SidebarGroups = SidebarGroups.Select(g => new SidebarGroupState
             {
@@ -1379,6 +1386,57 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsDefaultExplorer));
     }
 
+    // --- Start with Windows (run at login) ---
+
+    /// <summary>Whether the run-at-login option is available on this build/platform.</summary>
+    public bool CanStartWithWindows =>
+        OperatingSystem.IsWindows() && StartupSupportedWindows();
+
+    [SupportedOSPlatform("windows")]
+    private static bool StartupSupportedWindows()
+        => NexusExplorer.Platform.Windows.StartupService.IsSupported;
+
+    [ObservableProperty]
+    private bool _startWithWindows;
+
+    /// <summary>
+    /// Applies the run-at-login setting to the OS (HKCU Run key) and persists the preference.
+    /// Called from the Settings checkbox. Rolls back the toggle if the OS change fails.
+    /// </summary>
+    public async Task ApplyStartWithWindowsAsync()
+    {
+        if (!OperatingSystem.IsWindows() || !CanStartWithWindows)
+        {
+            StatusText = "Run at startup isn't available in this version.";
+            return;
+        }
+
+        var ok = NexusExplorer.Platform.Windows.StartupService.SetEnabled(StartWithWindows);
+        if (!ok)
+        {
+            // Roll back the UI toggle to reflect the real OS state.
+            StartWithWindows = NexusExplorer.Platform.Windows.StartupService.IsEnabled();
+            StatusText = "Couldn't change the Windows startup setting.";
+        }
+        else
+        {
+            StatusText = StartWithWindows
+                ? "Nexus Explorer will start with Windows."
+                : "Nexus Explorer will no longer start with Windows.";
+        }
+
+        try
+        {
+            var state = await _statePersistence.LoadAsync() ?? new AppState();
+            state.Preferences.StartWithWindows = StartWithWindows;
+            await _statePersistence.SaveAsync(state);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist StartWithWindows preference.");
+        }
+    }
+
     // --- Open with editor ---
 
     public ObservableCollection<EditorInfo> InstalledEditors { get; } = [];
@@ -1921,8 +1979,20 @@ public partial class MainWindowViewModel : ObservableObject
         var paths = GetSelectedPaths();
         if (paths.Count == 0) return;
 
-        // Confirmation is handled by the View showing a dialog
         IsDeleteConfirmationVisible = true;
+
+        // Inside the Recycle Bin, deleting is permanent (there is no further bin to move to),
+        // matching Windows Explorer behavior.
+        if (CurrentPath == VirtualPaths.RecycleBin)
+        {
+            _isDeleteFromBin = true;
+            DeleteConfirmationMessage = paths.Count == 1
+                ? $"Permanently delete '{Path.GetFileName(paths[0])}'? This cannot be undone."
+                : $"Permanently delete {paths.Count} items? This cannot be undone.";
+            return;
+        }
+
+        // Confirmation is handled by the View showing a dialog
         DeleteConfirmationMessage = paths.Count == 1
             ? $"Move '{Path.GetFileName(paths[0])}' to the Recycle Bin?"
             : $"Move {paths.Count} items to the Recycle Bin?";
@@ -1944,6 +2014,28 @@ public partial class MainWindowViewModel : ObservableObject
                 if (CurrentPath == VirtualPaths.RecycleBin)
                     LoadDirectory(VirtualPaths.RecycleBin);
             }
+            return;
+        }
+
+        // Permanent delete of selected items FROM inside the Recycle Bin.
+        if (_isDeleteFromBin)
+        {
+            _isDeleteFromBin = false;
+            var binPaths = GetSelectedPaths();
+            if (binPaths.Count == 0 || _recycleBinQuery is null) return;
+
+            int removed = 0;
+            foreach (var original in binPaths)
+            {
+                if (await _recycleBinQuery.DeleteAsync(original))
+                    removed++;
+            }
+            StatusText = removed == 0
+                ? "Nothing was deleted."
+                : removed == 1 ? "Permanently deleted 1 item." : $"Permanently deleted {removed} items.";
+
+            if (CurrentPath == VirtualPaths.RecycleBin)
+                LoadDirectory(VirtualPaths.RecycleBin);
             return;
         }
 
@@ -1996,6 +2088,7 @@ public partial class MainWindowViewModel : ObservableObject
         IsDeleteConfirmationVisible = false;
         _isPermanentDelete = false;
         _isEmptyRecycleBin = false;
+        _isDeleteFromBin = false;
     }
 
     [RelayCommand]

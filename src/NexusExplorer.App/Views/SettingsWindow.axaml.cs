@@ -45,6 +45,12 @@ public partial class SettingsWindow : Window
         _ = vm.ApplyGlobalHotkeyEnabledAsync();
     }
 
+    private void StartWithWindows_Changed(object? sender, RoutedEventArgs e)
+    {
+        if (!_ready || DataContext is not MainWindowViewModel vm) return;
+        _ = vm.ApplyStartWithWindowsAsync();
+    }
+
     private void OnCaptureKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || !vm.IsGlobalHotkeyCapturing) return;

@@ -664,11 +664,6 @@
                                 <fluent:SymbolIcon Symbol="Options" />
                                 <Button.Flyout>
                                     <MenuFlyout>
-                                        <MenuItem Header="Empty Recycle Bin" Command="{Binding EmptyRecycleBinCommand}"
-                                                  IsVisible="{Binding IsRecycleBinView}">
-                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon>
-                                        </MenuItem>
-                                        <Separator IsVisible="{Binding IsRecycleBinView}" />
                                         <MenuItem Header="New Folder" Command="{Binding CreateFolderCommand}">
                                             <MenuItem.Icon><fluent:SymbolIcon Symbol="FolderAdd" /></MenuItem.Icon>
                                         </MenuItem>
@@ -914,6 +909,11 @@
                                                                     PointerPressed="SidebarItem_PointerPressed">
                                                                 <Border.ContextMenu>
                                                                     <ContextMenu x:CompileBindings="False">
+                                                                        <MenuItem Header="Empty Recycle Bin"
+                                                                                  Command="{Binding $parent[Window].DataContext.EmptyRecycleBinCommand}"
+                                                                                  IsVisible="{Binding Path, Converter={x:Static vm:IsRecycleBinPathConverter.Instance}}">
+                                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon>
+                                                                        </MenuItem>
                                                                         <MenuItem Header="Unpin from Quick Access"
                                                                                   Command="{Binding $parent[Window].DataContext.UnpinFromFavoritesCommand}"
                                                                                   CommandParameter="{Binding Path}"
@@ -996,6 +996,11 @@
                                     behaviors:DragDropBehavior.IsEnabled="True">
                                 <Border.ContextMenu>
                                     <ContextMenu>
+                                        <MenuItem Header="Empty Recycle Bin" Command="{Binding EmptyRecycleBinCommand}"
+                                                  IsVisible="{Binding IsRecycleBinView}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator IsVisible="{Binding IsRecycleBinView}" />
                                         <MenuItem Header="View">
                                             <MenuItem.Icon><fluent:SymbolIcon Symbol="Grid" /></MenuItem.Icon>
                                             <MenuItem Header="Extra Large Icons" Command="{Binding SetExtraLargeIconsViewCommand}" />
@@ -1299,15 +1304,28 @@
                 <!-- ====================================================== -->
                 <Border Grid.Row="3" Padding="18,5,18,8"
                         Background="Transparent">
-                    <Grid ColumnDefinitions="*,Auto">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
                         <!-- Left: Status text (single source of truth) -->
                         <TextBlock Grid.Column="0"
                                    Text="{Binding StatusText}"
                                    VerticalAlignment="Center"
                                    FontSize="11" Foreground="{DynamicResource NexusStatusBarText}" />
 
+                        <!-- Empty Recycle Bin: always available while viewing the bin -->
+                        <Button Grid.Column="1" Classes="navBtn" Margin="0,0,10,0"
+                                Padding="10,4" FontSize="11.5"
+                                Command="{Binding EmptyRecycleBinCommand}"
+                                IsVisible="{Binding IsRecycleBinView}"
+                                ToolTip.Tip="Permanently empty the Recycle Bin">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <fluent:SymbolIcon Symbol="Delete" FontSize="13"
+                                                   Foreground="{DynamicResource NexusNavBtnForeground}" />
+                                <TextBlock Text="Empty Recycle Bin" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
                         <!-- Right: Zoom slider (only visible in icon views) -->
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
                                     VerticalAlignment="Center"
                                     IsVisible="{Binding ViewMode, Converter={x:Static vm:IsIconViewModeConverter.Instance}}">
                             <fluent:SymbolIcon Symbol="Image" FontSize="9"

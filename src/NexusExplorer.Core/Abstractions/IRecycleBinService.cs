@@ -56,6 +56,9 @@ public interface IRecycleBinQueryService
     /// <summary>Restores a Recycle Bin item (identified by its original path) to its original location.</summary>
     Task<bool> RestoreAsync(string originalPath, CancellationToken cancellationToken = default);
 
+    /// <summary>Permanently deletes a single Recycle Bin item (identified by its original path).</summary>
+    Task<bool> DeleteAsync(string originalPath, CancellationToken cancellationToken = default);
+
     /// <summary>Permanently empties the entire Recycle Bin.</summary>
     Task<bool> EmptyAsync(CancellationToken cancellationToken = default);
 }

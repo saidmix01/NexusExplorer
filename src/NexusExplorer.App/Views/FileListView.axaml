@@ -41,9 +41,11 @@
                                 PointerPressed="Item_PointerPressed">
                         <StackPanel.ContextMenu>
                             <ContextMenu x:CompileBindings="False">
-                                <!-- Recycle Bin: restore -->
+                                <!-- Recycle Bin: restore / empty -->
                                 <MenuItem Header="Restore" Command="{Binding $parent[UserControl].DataContext.RestoreSelectedCommand}"
                                           IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}"><MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowUndo" /></MenuItem.Icon></MenuItem>
+                                <MenuItem Header="Empty Recycle Bin" Command="{Binding $parent[UserControl].DataContext.EmptyRecycleBinCommand}"
+                                          IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}"><MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon></MenuItem>
                                 <Separator IsVisible="{Binding $parent[UserControl].DataContext.IsRecycleBinView}" />
                             
                                 <!-- ===== 1. OPEN ===== -->

@@ -21,10 +21,11 @@
         <TrayIcons>
             <TrayIcon Icon="/Assets/icon.png"
                       ToolTipText="Nexus Explorer"
-                      IsVisible="False">
+                      IsVisible="True">
                 <TrayIcon.Menu>
                     <NativeMenu>
                         <NativeMenuItem Header="Show Nexus Explorer" />
+                        <NativeMenuItem Header="Settings" />
                         <NativeMenuItemSeparator />
                         <NativeMenuItem Header="Exit" />
                     </NativeMenu>

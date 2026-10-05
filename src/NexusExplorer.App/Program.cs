@@ -25,6 +25,8 @@ public static class Program
 
         App.SingleInstance = singleInstance;
         App.InitialLaunchPath = launchPath;
+        // Launched by the Windows "run at login" entry: start hidden in the tray.
+        App.StartMinimizedToTray = args.Any(a => string.Equals(a, "--startup", StringComparison.OrdinalIgnoreCase));
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }

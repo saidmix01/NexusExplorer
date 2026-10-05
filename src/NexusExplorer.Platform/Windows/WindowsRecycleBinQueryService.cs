@@ -168,22 +168,197 @@ public sealed class WindowsRecycleBinQueryService : IRecycleBinQueryService
         }, cancellationToken);
     }
 
+    public Task<bool> DeleteAsync(string originalPath, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            if (!OperatingSystem.IsWindows() || string.IsNullOrEmpty(originalPath)) return false;
+
+            object? shell = null;
+            object? folder = null;
+            try
+            {
+                var shellType = Type.GetTypeFromProgID("Shell.Application");
+                if (shellType is null) return false;
+                shell = Activator.CreateInstance(shellType);
+                if (shell is null) return false;
+
+                folder = shellType.InvokeMember("NameSpace",
+                    BindingFlags.InvokeMethod, null, shell, [SsfBitBucket]);
+                if (folder is null) return false;
+
+                var folderType = folder.GetType();
+                var items = folderType.InvokeMember("Items",
+                    BindingFlags.InvokeMethod, null, folder, null);
+                if (items is null) return false;
+
+                var itemsType = items.GetType();
+                var count = (int)(itemsType.InvokeMember("Count",
+                    BindingFlags.GetProperty, null, items, null) ?? 0);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var item = itemsType.InvokeMember("Item",
+                        BindingFlags.InvokeMethod, null, items, [i]);
+                    if (item is null) continue;
+                    var itemType = item.GetType();
+
+                    var name = GetString(itemType, item, "Name");
+                    var originalDir = GetDetail(folderType, folder, item, PropOriginalLocation);
+                    var fullPath = !string.IsNullOrEmpty(originalDir)
+                        ? System.IO.Path.Combine(originalDir, name)
+                        : GetString(itemType, item, "Path");
+
+                    if (!string.Equals(fullPath, originalPath, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    // The recycled item's "Path" is its location inside the bin ($Recycle.Bin\...);
+                    // deleting that file+its metadata removes it permanently from the bin.
+                    var binPath = GetString(itemType, item, "Path");
+                    if (DeleteBinEntryFiles(binPath))
+                        return true;
+
+                    // Fallback: invoke the shell "Delete" verb on the item.
+                    if (InvokeDeleteVerb(itemType, item))
+                        return true;
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+            finally
+            {
+                Release(folder);
+                Release(shell);
+            }
+            return false;
+        }, cancellationToken);
+    }
+
     public Task<bool> EmptyAsync(CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
             if (!OperatingSystem.IsWindows()) return false;
+
+            // Primary: the shell API empties ALL drives' bins at once.
             try
             {
                 var hr = SHEmptyRecycleBin(IntPtr.Zero, null,
                     SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND);
-                return hr == 0;
+                if (hr == 0) return true;
+            }
+            catch
+            {
+                // fall through to the per-item fallback
+            }
+
+            // Fallback: delete each item individually via its backing file in $Recycle.Bin.
+            try
+            {
+                var any = false;
+                object? shell = null;
+                object? folder = null;
+                try
+                {
+                    var shellType = Type.GetTypeFromProgID("Shell.Application");
+                    if (shellType is null) return false;
+                    shell = Activator.CreateInstance(shellType);
+                    if (shell is null) return false;
+
+                    folder = shellType.InvokeMember("NameSpace",
+                        BindingFlags.InvokeMethod, null, shell, [SsfBitBucket]);
+                    if (folder is null) return false;
+
+                    var folderType = folder.GetType();
+                    var items = folderType.InvokeMember("Items",
+                        BindingFlags.InvokeMethod, null, folder, null);
+                    if (items is null) return false;
+
+                    var itemsType = items.GetType();
+                    var count = (int)(itemsType.InvokeMember("Count",
+                        BindingFlags.GetProperty, null, items, null) ?? 0);
+
+                    // Snapshot backing paths first (deleting mutates the collection).
+                    var binPaths = new List<string>();
+                    for (int i = 0; i < count; i++)
+                    {
+                        var item = itemsType.InvokeMember("Item",
+                            BindingFlags.InvokeMethod, null, items, [i]);
+                        if (item is null) continue;
+                        binPaths.Add(GetString(item.GetType(), item, "Path"));
+                    }
+
+                    foreach (var bp in binPaths)
+                    {
+                        if (DeleteBinEntryFiles(bp)) any = true;
+                    }
+                }
+                finally
+                {
+                    Release(folder);
+                    Release(shell);
+                }
+                return any;
             }
             catch
             {
                 return false;
             }
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Permanently removes a recycled entry by deleting its backing file/folder in the
+    /// $Recycle.Bin store (the FolderItem.Path points there). Returns true on success.
+    /// </summary>
+    private static bool DeleteBinEntryFiles(string binPath)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(binPath)) return false;
+            if (System.IO.Directory.Exists(binPath))
+            {
+                System.IO.Directory.Delete(binPath, recursive: true);
+                return true;
+            }
+            if (System.IO.File.Exists(binPath))
+            {
+                System.IO.File.Delete(binPath);
+                return true;
+            }
+        }
+        catch
+        {
+            // fall back to the shell verb
+        }
+        return false;
+    }
+
+    private static bool InvokeDeleteVerb(Type itemType, object item)
+    {
+        var verbs = itemType.InvokeMember("Verbs", BindingFlags.InvokeMethod, null, item, null);
+        if (verbs is null) return false;
+        var verbsType = verbs.GetType();
+        var count = (int)(verbsType.InvokeMember("Count", BindingFlags.GetProperty, null, verbs, null) ?? 0);
+
+        for (int v = 0; v < count; v++)
+        {
+            var verb = verbsType.InvokeMember("Item", BindingFlags.InvokeMethod, null, verbs, [v]);
+            if (verb is null) continue;
+            var name = GetString(verb.GetType(), verb, "Name").Replace("&", "");
+            if (name.Contains("Delete", StringComparison.OrdinalIgnoreCase)
+                || name.Contains("Eliminar", StringComparison.OrdinalIgnoreCase)
+                || name.Contains("Supprimer", StringComparison.OrdinalIgnoreCase))
+            {
+                verb.GetType().InvokeMember("DoIt", BindingFlags.InvokeMethod, null, verb, null);
+                Release(verb);
+                return true;
+            }
+            Release(verb);
+        }
+        return false;
     }
 
     // --- reflection helpers ---
