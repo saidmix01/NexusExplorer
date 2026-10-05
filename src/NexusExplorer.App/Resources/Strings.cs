@@ -36,7 +36,7 @@ public static class Strings
     public const string SplitView = "Split View";
     public const string TerminalOnly = "Terminal Only";
     public const string TogglePreview = "Toggle Preview";
-    public const string ToggleTheme = "Toggle Dark/Light Mode";
+    public const string ToggleTheme = "Switch Theme";
 
     // === File Operations ===
     public const string Open = "Open";

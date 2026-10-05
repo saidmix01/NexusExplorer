@@ -55,10 +55,25 @@ public interface IFileOperationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates an empty file.
+    /// Creates an empty file. When <paramref name="autoResolveConflicts"/> is true, a name clash is
+    /// resolved automatically (e.g. "New Text Document (2).txt") instead of failing — matching the
+    /// behavior of <see cref="CreateDirectoryAsync"/>. Returns the path of the created file.
     /// </summary>
     Task<(FileOperationResult Result, string? CreatedPath)> CreateFileAsync(
         string parentDirectory,
         string fileName,
+        bool autoResolveConflicts = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a new file in <paramref name="parentDirectory"/> described by a shell "New" entry.
+    /// The creation mechanism is chosen from <see cref="NewItemDefinition.Kind"/>: an empty file, a
+    /// copy of a template document, or inline data. Folder definitions are handled by the caller via
+    /// <see cref="CreateDirectoryAsync"/>. Names are de-duplicated automatically so the action never
+    /// fails on an existing name. Returns the path of the created file.
+    /// </summary>
+    Task<(FileOperationResult Result, string? CreatedPath)> CreateFromDefinitionAsync(
+        string parentDirectory,
+        NewItemDefinition definition,
         CancellationToken cancellationToken = default);
 }

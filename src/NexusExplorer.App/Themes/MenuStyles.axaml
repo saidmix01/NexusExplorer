@@ -1,0 +1,273 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:conv="using:Avalonia.Controls.Converters">
+
+    <!-- ============================================================ -->
+    <!-- MENU STYLES — compact, modern / minimalist                   -->
+    <!--                                                              -->
+    <!-- Global ControlThemes for ContextMenu, MenuFlyoutPresenter,   -->
+    <!-- MenuItem and Separator. Colours come from the Nexus* theme   -->
+    <!-- resources (swapped at runtime by ThemeService), so menus     -->
+    <!-- adapt to every light/dark theme automatically.               -->
+    <!--                                                              -->
+    <!-- Design tokens (compact):                                     -->
+    <!--   Container radius .... 8px + soft shadow                    -->
+    <!--   Item height ......... 26px, radius 4px                     -->
+    <!--   Icon ................ 14px in a fixed 16px column          -->
+    <!--   Font ................ 12px (shortcut 11px, dimmed)         -->
+    <!-- ============================================================ -->
+
+    <!-- Official converter: KeyGesture -> platform string ("Ctrl+X"). -->
+    <conv:PlatformKeyGestureConverter x:Key="NexusKeyGestureConverter" />
+
+    <!-- ===== Sizing tokens =====
+         Types MUST match the target property: DynamicResource does not
+         type-convert, and a mismatch (e.g. Double -> CornerRadius) throws
+         at runtime when the menu opens. -->
+    <CornerRadius x:Key="NexusMenuCornerRadius">8</CornerRadius>
+    <CornerRadius x:Key="NexusMenuItemCornerRadius">4</CornerRadius>
+    <x:Double x:Key="NexusMenuItemMinHeight">26</x:Double>
+    <x:Double x:Key="NexusMenuIconSize">14</x:Double>
+    <x:Double x:Key="NexusMenuFontSize">12</x:Double>
+    <Thickness x:Key="NexusMenuPadding">4</Thickness>
+    <Thickness x:Key="NexusMenuItemPadding">8,0,8,0</Thickness>
+
+    <!-- Transparent gutter around the card so the BoxShadow is drawn INSIDE
+         the popup window instead of being clipped into a grey square corner. -->
+    <Thickness x:Key="NexusMenuShadowGutter">6,2,6,8</Thickness>
+
+    <!-- ============================================================ -->
+    <!-- ContextMenu — rounded, shadowed container                    -->
+    <!-- ============================================================ -->
+    <ControlTheme x:Key="{x:Type ContextMenu}" TargetType="ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource NexusSurface}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource NexusBorderLight}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="{DynamicResource NexusMenuPadding}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource NexusMenuCornerRadius}" />
+        <Setter Property="MinWidth" Value="160" />
+        <Setter Property="MaxWidth" Value="360" />
+        <Setter Property="FontSize" Value="{DynamicResource NexusMenuFontSize}" />
+        <Setter Property="WrapSelection" Value="True" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Margin="{DynamicResource NexusMenuShadowGutter}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}"
+                        BoxShadow="0 3 8 0 #26000000">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <ItemsPresenter ItemsPanel="{TemplateBinding ItemsPanel}"
+                                        Grid.IsSharedSizeScope="True"
+                                        KeyboardNavigation.TabNavigation="Continue" />
+                    </ScrollViewer>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <!-- ============================================================ -->
+    <!-- MenuFlyoutPresenter — <MenuFlyout> looks like a ContextMenu  -->
+    <!-- ============================================================ -->
+    <ControlTheme x:Key="{x:Type MenuFlyoutPresenter}" TargetType="MenuFlyoutPresenter">
+        <Setter Property="Background" Value="{DynamicResource NexusSurface}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource NexusBorderLight}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="{DynamicResource NexusMenuPadding}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource NexusMenuCornerRadius}" />
+        <Setter Property="MinWidth" Value="160" />
+        <Setter Property="MaxWidth" Value="360" />
+        <Setter Property="FontSize" Value="{DynamicResource NexusMenuFontSize}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Margin="{DynamicResource NexusMenuShadowGutter}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}"
+                        BoxShadow="0 3 8 0 #26000000">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <ItemsPresenter ItemsPanel="{TemplateBinding ItemsPanel}"
+                                        Grid.IsSharedSizeScope="True"
+                                        KeyboardNavigation.TabNavigation="Continue" />
+                    </ScrollViewer>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <!-- ============================================================ -->
+    <!-- MenuItem                                                     -->
+    <!--   [icon 16] [header *] [shortcut Auto] [chevron 12]          -->
+    <!-- The fixed icon column keeps text aligned with or w/o icon.   -->
+    <!-- Structure mirrors Avalonia's official template (Panel with   -->
+    <!-- layout Border + submenu Popup as siblings, same PART_ names).-->
+    <!-- ============================================================ -->
+    <ControlTheme x:Key="{x:Type MenuItem}" TargetType="MenuItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource NexusText}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="{DynamicResource NexusMenuItemPadding}" />
+        <Setter Property="MinHeight" Value="{DynamicResource NexusMenuItemMinHeight}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource NexusMenuItemCornerRadius}" />
+        <Setter Property="FontSize" Value="{DynamicResource NexusMenuFontSize}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <Border Name="PART_LayoutRoot"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}"
+                            MinHeight="{TemplateBinding MinHeight}">
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="NexusMenuItemIGT" />
+                                <ColumnDefinition Width="12" />
+                            </Grid.ColumnDefinitions>
+
+                            <Viewbox Grid.Column="0"
+                                     Width="{DynamicResource NexusMenuIconSize}"
+                                     Height="{DynamicResource NexusMenuIconSize}"
+                                     StretchDirection="DownOnly"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center">
+                                <ContentPresenter Name="PART_IconPresenter"
+                                                  IsVisible="False"
+                                                  Content="{TemplateBinding Icon}" />
+                            </Viewbox>
+
+                            <ContentPresenter Name="PART_HeaderPresenter"
+                                              Grid.Column="1"
+                                              Content="{TemplateBinding Header}"
+                                              ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"
+                                              Margin="8,0,0,0"
+                                              RecognizesAccessKey="True" />
+
+                            <TextBlock Name="PART_InputGestureText"
+                                       Grid.Column="2"
+                                       Text="{TemplateBinding InputGesture, Converter={StaticResource NexusKeyGestureConverter}}"
+                                       Foreground="{DynamicResource NexusTextTertiary}"
+                                       FontSize="11"
+                                       VerticalAlignment="Center"
+                                       Margin="20,0,0,0" />
+
+                            <Path Name="PART_ChevronPath"
+                                  Grid.Column="3"
+                                  Width="4" Height="7"
+                                  Stretch="Uniform"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Right"
+                                  Fill="{DynamicResource NexusTextTertiary}"
+                                  Data="M0,0 L5,5 L0,10 Z" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Offsets compensate for the shadow gutter so the submenu card
+                         sits right next to the parent card, first items aligned. -->
+                    <Popup Name="PART_Popup"
+                           WindowManagerAddShadowHint="False"
+                           Placement="RightEdgeAlignedTop"
+                           HorizontalOffset="2"
+                           VerticalOffset="-7"
+                           IsLightDismissEnabled="False"
+                           IsOpen="{TemplateBinding IsSubMenuOpen, Mode=TwoWay}">
+                        <Border Margin="{DynamicResource NexusMenuShadowGutter}"
+                                Background="{DynamicResource NexusSurface}"
+                                BorderBrush="{DynamicResource NexusBorderLight}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource NexusMenuCornerRadius}"
+                                Padding="{DynamicResource NexusMenuPadding}"
+                                MinWidth="150"
+                                MaxWidth="360"
+                                BoxShadow="0 3 8 0 #26000000">
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter Name="PART_ItemsPresenter"
+                                                ItemsPanel="{TemplateBinding ItemsPanel}"
+                                                Grid.IsSharedSizeScope="True" />
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+
+        <!-- Icon visible only when the item has one (:icon = Icon != null). -->
+        <Style Selector="^:icon /template/ ContentPresenter#PART_IconPresenter">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <!-- NOTE: icon tint/size lives in Themes/MenuIconStyles.axaml. ControlThemes
+             may only use ^ / pseudo-class / template selectors; a descendant
+             selector here (e.g. "^ fluent|SymbolIcon") throws when the menu opens. -->
+
+        <!-- Chevron only for items with a submenu; no shortcut on parents. -->
+        <Style Selector="^:empty /template/ Path#PART_ChevronPath">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="^:not(:empty) /template/ TextBlock#PART_InputGestureText">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <!-- Hover / keyboard selection / open submenu -->
+        <Style Selector="^:pointerover /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="^:open /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+
+        <!-- Pressed -->
+        <Style Selector="^:pressed /template/ Border#PART_LayoutRoot:pointerover">
+            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+        </Style>
+
+        <!-- MenuItem Header="-" renders as a separator -->
+        <Style Selector="^:separator">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Separator />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <!-- Disabled -->
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="^:disabled /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+    </ControlTheme>
+
+    <!-- ============================================================ -->
+    <!-- Separator — 1px, subtle                                       -->
+    <!-- ============================================================ -->
+    <ControlTheme x:Key="{x:Type Separator}" TargetType="Separator">
+        <Setter Property="Background" Value="{DynamicResource NexusBorderLight}" />
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="6,3" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        Height="{TemplateBinding Height}"
+                        HorizontalAlignment="Stretch" />
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+</ResourceDictionary>

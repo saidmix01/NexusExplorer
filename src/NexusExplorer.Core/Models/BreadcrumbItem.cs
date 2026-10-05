@@ -13,4 +13,10 @@ public sealed class BreadcrumbItem
     /// Used for visual hierarchy — the last segment is displayed bold and bright.
     /// </summary>
     public bool IsLast { get; set; }
+
+    /// <summary>
+    /// Whether this is the first segment in the trail. Used to suppress the leading
+    /// chevron separator so the bar reads "Users › Downloads" (no leading "›").
+    /// </summary>
+    public bool IsFirst { get; set; }
 }

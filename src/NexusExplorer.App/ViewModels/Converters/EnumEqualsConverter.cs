@@ -31,3 +31,28 @@ public sealed class EnumEqualsConverter : IValueConverter
         return BindingOperations.DoNothing;
     }
 }
+
+/// <summary>
+/// Two-way converter for binding a selection control (e.g. a rail RadioButton) to an int index.
+/// Convert returns true when the bound value equals the ConverterParameter; ConvertBack returns
+/// the parameter (as int) when checked, and DoNothing when unchecked.
+/// </summary>
+public sealed class IntEqualsConverter : IValueConverter
+{
+    public static readonly IntEqualsConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is null || parameter is null) return false;
+        return int.TryParse(value.ToString(), out var v)
+            && int.TryParse(parameter.ToString(), out var p)
+            && v == p;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is true && parameter is not null && int.TryParse(parameter.ToString(), out var p))
+            return p;
+        return BindingOperations.DoNothing;
+    }
+}

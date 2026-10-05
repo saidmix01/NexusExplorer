@@ -29,6 +29,12 @@ public partial class App : Application
     /// <summary>Folder to open on startup, passed via command line (e.g. "Reveal in Explorer").</summary>
     public static string? InitialLaunchPath { get; set; }
 
+    /// <summary>When true (launched via the run-at-login entry), the app starts hidden in the tray.</summary>
+    public static bool StartMinimizedToTray { get; set; }
+
+    /// <summary>Shared tray context-menu popup window (themed, custom chrome).</summary>
+    private Views.TrayMenuWindow? _trayMenu;
+
     private static readonly ILogger CrashLogger = NexusLog.Create("UnhandledException");
 
     private static readonly string CrashLogPath = Path.Combine(
@@ -44,8 +50,8 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
         StartupTiming.Mark("App XAML loaded");
 
-        // Apply the default Light theme immediately so DynamicResource bindings resolve
-        ThemeService.Instance.ApplyTheme(ThemeMode.Light);
+        // Apply the default theme immediately so DynamicResource bindings resolve
+        ThemeService.Instance.ApplyTheme(ThemeMode.RefinedMinimalism);
         StartupTiming.Mark("Theme applied");
 
         // Wire up global unhandled exception handlers
@@ -96,6 +102,17 @@ public partial class App : Application
 
             // Wire up tray icon events
             SetupTrayIcon();
+
+            // Launched at login (--startup): keep the window hidden in the tray.
+            if (StartMinimizedToTray)
+            {
+                desktop.Startup += (_, _) => Dispatcher.UIThread.Post(() =>
+                {
+                    _mainWindow?.Hide();
+                    if (_trayIcon is not null)
+                        _trayIcon.ToolTipText = "Nexus Explorer — Running in background";
+                });
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -109,21 +126,69 @@ public partial class App : Application
 
         if (_trayIcon is not null)
         {
-            _trayIcon.Clicked += (_, _) => ShowMainWindow();
+            // The tray icon is always present now (not just while minimized).
+            _trayIcon.IsVisible = true;
 
-            // Wire up menu items
+            // Left-click on the tray opens our themed menu (same UI as the rest of the app).
+            _trayIcon.Clicked += (_, _) => ShowTrayMenu();
+
+            // Right-click uses the OS NativeMenu (Avalonia can't theme or intercept it).
             if (_trayIcon.Menu is NativeMenu menu)
             {
                 foreach (var item in menu.Items.OfType<NativeMenuItem>())
                 {
                     if (item.Header == "Show Nexus Explorer")
                         item.Click += (_, _) => ShowMainWindow();
+                    else if (item.Header == "Settings")
+                        item.Click += (_, _) => Dispatcher.UIThread.Post(OpenSettingsWindow);
                     else if (item.Header == "Exit")
                         item.Click += (_, _) => RequestExit();
                 }
             }
         }
     }
+
+    /// <summary>Shows the themed tray menu near the mouse cursor.</summary>
+    private void ShowTrayMenu()
+    {
+        if (_trayMenu is null)
+        {
+            _trayMenu = new Views.TrayMenuWindow { DataContext = _viewModel };
+            _trayMenu.ShowRequested += ShowMainWindow;
+            _trayMenu.SettingsRequested += () => Dispatcher.UIThread.Post(OpenSettingsWindow);
+            _trayMenu.ExitRequested += RequestExit;
+        }
+
+        if (_trayMenu.IsVisible)
+        {
+            _trayMenu.Hide();
+            return;
+        }
+
+        // Position near the current cursor (bottom-right corner of the screen area).
+        try
+        {
+            var pos = GetCursorPosition();
+            if (pos is { } p)
+                _trayMenu.Position = new PixelPoint(p.X - 210, p.Y - 150);
+        }
+        catch { /* fall back to default position */ }
+
+        _trayMenu.Show();
+        _trayMenu.Activate();
+    }
+
+    private static PixelPoint? GetCursorPosition()
+    {
+        if (!OperatingSystem.IsWindows()) return null;
+        return GetCursorPos(out var pt) ? new PixelPoint(pt.X, pt.Y) : null;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT { public int X; public int Y; }
 
     private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
     {
@@ -181,13 +246,13 @@ public partial class App : Application
     private void ShowMainWindow()
     {
         if (_mainWindow is null) return;
+        _trayMenu?.Hide();
         _mainWindow.Show();
         // Only un-minimize; preserve a maximized window instead of forcing it back to Normal.
         if (_mainWindow.WindowState == WindowState.Minimized)
             _mainWindow.WindowState = WindowState.Normal;
         _mainWindow.Activate();
-        if (_trayIcon is not null)
-            _trayIcon.IsVisible = false;
+        // Tray icon stays visible at all times.
     }
 
     private void OpenSettingsWindow()

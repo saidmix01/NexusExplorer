@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Runtime.Versioning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NexusExplorer.App.Services;
 using NexusExplorer.Core.Abstractions;
 using NexusExplorer.Core.Models;
+using NexusExplorer.Core.Models.Projects;
 
 namespace NexusExplorer.App.ViewModels;
 
@@ -20,6 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ISearchService _searchService;
     private readonly IOperationHistoryService _historyService;
     private readonly ISendToService _sendToService;
+    private readonly IRecycleBinQueryService? _recycleBinQuery;
     private readonly IFileWatcherService _fileWatcherService;
     private readonly IStatePersistenceService _statePersistence;
     private readonly IFolderColorService _folderColorService;
@@ -29,6 +32,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ITerminalDiscoveryService _terminalDiscovery;
     private readonly ITerminalLauncher _terminalLauncher;
     private readonly IGlobalHotkeyService _globalHotkeyService;
+    private readonly IProjectDetectionService? _projectDetectionService;
+    private readonly IShellNewTemplateService? _shellNewTemplateService;
     private readonly ILogger<MainWindowViewModel> _logger;
 
     private CancellationTokenSource? _loadCts;
@@ -103,6 +108,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private int? _previewImageHeight;
+
+    [ObservableProperty]
+    private DateTime? _previewCreated;
+
+    /// <summary>Rich label/value metadata rows shown in the preview panel.</summary>
+    public ObservableCollection<PreviewMetadataEntry> PreviewMetadata { get; } = [];
 
     [ObservableProperty]
     private bool _hasPreviewError;
@@ -305,7 +316,25 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private ExplorerViewMode _viewMode = ExplorerViewMode.Details;
 
+    /// <summary>
+    /// Whether the content area shows the normal file listing or the Project Explorer.
+    /// Persisted per tab; the normal file navigation always remains available.
+    /// </summary>
+    [ObservableProperty]
+    private ExplorerContentMode _contentMode = ExplorerContentMode.Files;
+
     private bool _isPermanentDelete;
+    private bool _isEmptyRecycleBin;
+    private bool _isDeleteFromBin;
+
+    partial void OnCurrentPathChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsRecycleBinView));
+
+        // Keep the Project Explorer in sync when navigating while it is the active content.
+        if (ContentMode == ExplorerContentMode.Project)
+            _ = ProjectExplorer.LoadAsync(value);
+    }
 
     public bool HasClipboardContent => _clipboardService?.HasContent ?? false;
     public int ClipboardCount => _clipboardService?.Count ?? 0;
@@ -332,7 +361,11 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _showItemInfo = false;
 
     [ObservableProperty]
-    private ThemeMode _currentTheme = ThemeMode.Light;
+    private ThemeMode _currentTheme = ThemeMode.RefinedMinimalism;
+
+    /// <summary>Selected section in the Settings window: 0=Appearance, 1=Default Manager, 2=Shortcuts.</summary>
+    [ObservableProperty]
+    private int _settingsTabIndex;
 
     [ObservableProperty]
     private double _iconZoomLevel = 50;
@@ -376,6 +409,26 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ComputedItemWidth));
         OnPropertyChanged(nameof(ComputedFontSize));
     }
+
+    partial void OnContentModeChanged(ExplorerContentMode value)
+    {
+        // Persist on the active tab like the other per-tab view state.
+        if (_tabService?.ActiveTab is { } tab)
+            tab.ContentMode = value;
+
+        if (value == ExplorerContentMode.Project)
+            _ = ProjectExplorer.LoadAsync(CurrentPath);
+        else
+            ProjectExplorer.Clear();
+    }
+
+    /// <summary>Shows the normal file listing. Project detection has no effect on it.</summary>
+    [RelayCommand]
+    private void ShowFilesContent() => ContentMode = ExplorerContentMode.Files;
+
+    /// <summary>Shows the Project Explorer logical view for the current folder.</summary>
+    [RelayCommand]
+    private void ShowProjectContent() => ContentMode = ExplorerContentMode.Project;
 
     private int ComputeIconSize()
     {
@@ -423,6 +476,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     public TerminalViewModel Terminal { get; }
 
+    /// <summary>Project Explorer child view model (logical project view for the active folder).</summary>
+    public ProjectExplorerViewModel ProjectExplorer { get; }
+
     public ObservableCollection<FileSystemItem> Items { get; } = [];
     public ObservableCollection<SidebarGroup> SidebarGroups { get; } = [];
 
@@ -453,6 +509,9 @@ public partial class MainWindowViewModel : ObservableObject
         ITerminalDiscoveryService terminalDiscovery,
         ITerminalLauncher terminalLauncher,
         IGlobalHotkeyService globalHotkeyService,
+        IRecycleBinQueryService? recycleBinQuery = null,
+        IProjectDetectionService? projectDetectionService = null,
+        IShellNewTemplateService? shellNewTemplateService = null,
         ILogger<MainWindowViewModel>? logger = null)
     {
         StartupTiming.Mark("MainWindowViewModel ctor begin");
@@ -478,7 +537,35 @@ public partial class MainWindowViewModel : ObservableObject
         _terminalDiscovery = terminalDiscovery;
         _terminalLauncher = terminalLauncher;
         _globalHotkeyService = globalHotkeyService;
+        _projectDetectionService = projectDetectionService;
+        _shellNewTemplateService = shellNewTemplateService;
+        _recycleBinQuery = recycleBinQuery;
         _logger = logger ?? NullLogger<MainWindowViewModel>.Instance;
+
+        // Project Explorer: a logical view over the active folder. It reuses this view model's
+        // existing navigation/open pipeline for file mapping instead of duplicating it.
+        // When no detection service is available (e.g. unit tests), fall back to an inert instance.
+        ProjectExplorer = _projectDetectionService is null
+            ? new ProjectExplorerViewModel()
+            : new ProjectExplorerViewModel(
+                _projectDetectionService,
+                openFolderAsync: path =>
+                {
+                    _tabService.ActiveTab.NavigateTo(path);
+                    LoadDirectory(path);
+                    return Task.CompletedTask;
+                },
+                openFileAsync: async path =>
+                {
+                    try
+                    {
+                        await _platformService.OpenWithDefaultAsync(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        StatusText = $"Cannot open file: {ex.Message}";
+                    }
+                });
         _historyService.HistoryChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(CanUndo));
@@ -554,6 +641,11 @@ public partial class MainWindowViewModel : ObservableObject
             // Terminal discovery is non-critical — the submenu just stays empty.
             _logger.LogWarning(ex, "Terminal discovery failed.");
         }
+
+        // Build the dynamic "New" submenu up front (like Send To above) so HasNewMenuItems is
+        // already true before any context menu opens — otherwise the menu evaluates visibility
+        // before the async load finishes and the submenu never shows on first open.
+        await LoadNewMenuItemsAsync();
     }
 
     /// <summary>
@@ -579,8 +671,10 @@ public partial class MainWindowViewModel : ObservableObject
         _terminalDiscovery = null!;
         _terminalLauncher = null!;
         _globalHotkeyService = null!;
+        _projectDetectionService = null!;
         _logger = NullLogger<MainWindowViewModel>.Instance;
         Terminal = new TerminalViewModel();
+        ProjectExplorer = new ProjectExplorerViewModel();
     }
 
     public bool CanGoBack => _tabService?.ActiveTab?.CanGoBack ?? false;
@@ -603,20 +697,31 @@ public partial class MainWindowViewModel : ObservableObject
                 // Restore preferences
                 IsPreviewVisible = state.Preferences.ShowPreviewPanel;
                 IconZoomLevel = state.Preferences.IconZoomLevel;
-                CurrentTheme = state.Preferences.Theme;
+                // Normalize legacy persisted theme values (Light/Dark/System) onto the
+                // current four-theme set so the Settings selection reflects reality.
+                CurrentTheme = NormalizeTheme(state.Preferences.Theme);
 
                 if (!string.IsNullOrWhiteSpace(state.Preferences.GlobalHotkeyShortcut))
                     GlobalHotkeyShortcut = state.Preferences.GlobalHotkeyShortcut;
                 GlobalHotkeyEnabled = state.Preferences.GlobalHotkeyEnabled;
+
+                // Reflect the real OS startup state (registry is the source of truth).
+                StartWithWindows = OperatingSystem.IsWindows()
+                    && NexusExplorer.Platform.Windows.StartupService.IsEnabled();
 
                 // Restore tabs
                 for (int i = 0; i < state.Tabs.Count; i++)
                 {
                     var ts = state.Tabs[i];
                     var path = Directory.Exists(ts.CurrentPath) ? ts.CurrentPath : _platformService.HomePath;
-                    var tab = new TabItem(path, ts.Title, ts.BackStack, ts.ForwardStack)
+                    // Keep the saved title only if the tab reopens at the same location; otherwise
+                    // (virtual paths such as color groups, or a deleted folder) let the tab derive
+                    // its title from the path it actually opens.
+                    var title = string.Equals(path, ts.CurrentPath, StringComparison.OrdinalIgnoreCase) ? ts.Title : null;
+                    var tab = new TabItem(path, title, ts.BackStack, ts.ForwardStack)
                     {
-                        ViewMode = ts.ViewMode,
+                        // List mode was removed from the UI; coerce legacy saves to Details.
+                        ViewMode = ts.ViewMode == ExplorerViewMode.List ? ExplorerViewMode.Details : ts.ViewMode,
                         LayoutMode = ts.LayoutMode,
                         SplitOrientation = ts.SplitOrientation,
                         SplitRatio = ts.SplitRatio,
@@ -708,7 +813,8 @@ public partial class MainWindowViewModel : ObservableObject
                 PinnedFavorites = _pinnedFavorites.ToList(),
                 Theme = CurrentTheme,
                 GlobalHotkeyEnabled = GlobalHotkeyEnabled,
-                GlobalHotkeyShortcut = GlobalHotkeyShortcut
+                GlobalHotkeyShortcut = GlobalHotkeyShortcut,
+                StartWithWindows = StartWithWindows
             },
             SidebarGroups = SidebarGroups.Select(g => new SidebarGroupState
             {
@@ -1246,13 +1352,22 @@ public partial class MainWindowViewModel : ObservableObject
 
     // --- Default Explorer registration ---
 
+    /// <summary>
+    /// Replacing Explorer works by writing per-user shell registrations. MSIX virtualizes those
+    /// writes into a private hive that Explorer never reads, so the option is unavailable (and
+    /// hidden) in the Microsoft Store build.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatformGuard("windows")]
+    public bool CanSetDefaultExplorer =>
+        OperatingSystem.IsWindows() && !NexusExplorer.Platform.Windows.PackageInfo.IsPackaged;
+
     public bool IsDefaultExplorer =>
-        OperatingSystem.IsWindows() && NexusExplorer.Platform.Windows.DefaultExplorerService.IsDefault();
+        CanSetDefaultExplorer && NexusExplorer.Platform.Windows.DefaultExplorerService.IsDefault();
 
     [RelayCommand]
     private void SetAsDefaultExplorer()
     {
-        if (!OperatingSystem.IsWindows()) { StatusText = "Only available on Windows"; return; }
+        if (!CanSetDefaultExplorer) { StatusText = "Not available in this version"; return; }
         var success = NexusExplorer.Platform.Windows.DefaultExplorerService.Register();
         StatusText = success
             ? "NexusExplorer is now the default file explorer"
@@ -1263,12 +1378,63 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void RestoreDefaultExplorer()
     {
-        if (!OperatingSystem.IsWindows()) { StatusText = "Only available on Windows"; return; }
+        if (!CanSetDefaultExplorer) { StatusText = "Not available in this version"; return; }
         var success = NexusExplorer.Platform.Windows.DefaultExplorerService.Unregister();
         StatusText = success
             ? "Windows Explorer restored as default"
             : "Failed to restore default explorer";
         OnPropertyChanged(nameof(IsDefaultExplorer));
+    }
+
+    // --- Start with Windows (run at login) ---
+
+    /// <summary>Whether the run-at-login option is available on this build/platform.</summary>
+    public bool CanStartWithWindows =>
+        OperatingSystem.IsWindows() && StartupSupportedWindows();
+
+    [SupportedOSPlatform("windows")]
+    private static bool StartupSupportedWindows()
+        => NexusExplorer.Platform.Windows.StartupService.IsSupported;
+
+    [ObservableProperty]
+    private bool _startWithWindows;
+
+    /// <summary>
+    /// Applies the run-at-login setting to the OS (HKCU Run key) and persists the preference.
+    /// Called from the Settings checkbox. Rolls back the toggle if the OS change fails.
+    /// </summary>
+    public async Task ApplyStartWithWindowsAsync()
+    {
+        if (!OperatingSystem.IsWindows() || !CanStartWithWindows)
+        {
+            StatusText = "Run at startup isn't available in this version.";
+            return;
+        }
+
+        var ok = NexusExplorer.Platform.Windows.StartupService.SetEnabled(StartWithWindows);
+        if (!ok)
+        {
+            // Roll back the UI toggle to reflect the real OS state.
+            StartWithWindows = NexusExplorer.Platform.Windows.StartupService.IsEnabled();
+            StatusText = "Couldn't change the Windows startup setting.";
+        }
+        else
+        {
+            StatusText = StartWithWindows
+                ? "Nexus Explorer will start with Windows."
+                : "Nexus Explorer will no longer start with Windows.";
+        }
+
+        try
+        {
+            var state = await _statePersistence.LoadAsync() ?? new AppState();
+            state.Preferences.StartWithWindows = StartWithWindows;
+            await _statePersistence.SaveAsync(state);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist StartWithWindows preference.");
+        }
     }
 
     // --- Open with editor ---
@@ -1470,17 +1636,33 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<FolderColorOption> FolderColorPresets { get; } = new();
 
+    /// <summary>
+    /// Folder color menu entries: a "Default" (clears the color) entry followed by the
+    /// preset colors. Lets the "Folder Color ▸" submenu host the reset option inline.
+    /// A Default entry is identified by an empty <see cref="FolderColorOption.ColorHex"/>.
+    /// </summary>
+    public ObservableCollection<FolderColorOption> FolderColorMenuOptions { get; } = new();
+
     private void LoadFolderColorPresets()
     {
         FolderColorPresets.Clear();
-        if (_folderColorService is null) return;
-        foreach (var preset in _folderColorService.GetPresetColors())
+        FolderColorMenuOptions.Clear();
+        FolderColorMenuOptions.Add(new FolderColorOption { Name = "Default", ColorHex = "" });
+        var presets = _folderColorService?.GetPresetColors();
+        if (presets is null) return;
+        foreach (var preset in presets)
+        {
             FolderColorPresets.Add(preset);
+            FolderColorMenuOptions.Add(preset);
+        }
     }
 
     [RelayCommand]
     private void SetFolderColor(string? colorHex)
     {
+        // An empty hex (the "Default" menu entry) clears the custom color.
+        if (string.IsNullOrEmpty(colorHex)) colorHex = null;
+
         // Apply to all selected directories (or the single selected item as a fallback).
         var targets = SelectedItems.Count > 0
             ? SelectedItems.Where(i => i.Type == FileSystemItemType.Directory).ToList()
@@ -1797,8 +1979,20 @@ public partial class MainWindowViewModel : ObservableObject
         var paths = GetSelectedPaths();
         if (paths.Count == 0) return;
 
-        // Confirmation is handled by the View showing a dialog
         IsDeleteConfirmationVisible = true;
+
+        // Inside the Recycle Bin, deleting is permanent (there is no further bin to move to),
+        // matching Windows Explorer behavior.
+        if (CurrentPath == VirtualPaths.RecycleBin)
+        {
+            _isDeleteFromBin = true;
+            DeleteConfirmationMessage = paths.Count == 1
+                ? $"Permanently delete '{Path.GetFileName(paths[0])}'? This cannot be undone."
+                : $"Permanently delete {paths.Count} items? This cannot be undone.";
+            return;
+        }
+
+        // Confirmation is handled by the View showing a dialog
         DeleteConfirmationMessage = paths.Count == 1
             ? $"Move '{Path.GetFileName(paths[0])}' to the Recycle Bin?"
             : $"Move {paths.Count} items to the Recycle Bin?";
@@ -1808,6 +2002,43 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task ConfirmDeleteAsync()
     {
         IsDeleteConfirmationVisible = false;
+
+        // Empty-Recycle-Bin reuses this confirmation overlay.
+        if (_isEmptyRecycleBin)
+        {
+            _isEmptyRecycleBin = false;
+            if (_recycleBinQuery is not null)
+            {
+                var ok = await _recycleBinQuery.EmptyAsync();
+                StatusText = ok ? "Recycle Bin emptied." : "Couldn't empty the Recycle Bin.";
+                if (CurrentPath == VirtualPaths.RecycleBin)
+                    LoadDirectory(VirtualPaths.RecycleBin);
+            }
+            return;
+        }
+
+        // Permanent delete of selected items FROM inside the Recycle Bin.
+        if (_isDeleteFromBin)
+        {
+            _isDeleteFromBin = false;
+            var binPaths = GetSelectedPaths();
+            if (binPaths.Count == 0 || _recycleBinQuery is null) return;
+
+            int removed = 0;
+            foreach (var original in binPaths)
+            {
+                if (await _recycleBinQuery.DeleteAsync(original))
+                    removed++;
+            }
+            StatusText = removed == 0
+                ? "Nothing was deleted."
+                : removed == 1 ? "Permanently deleted 1 item." : $"Permanently deleted {removed} items.";
+
+            if (CurrentPath == VirtualPaths.RecycleBin)
+                LoadDirectory(VirtualPaths.RecycleBin);
+            return;
+        }
+
         var paths = GetSelectedPaths();
         if (paths.Count == 0) return;
 
@@ -1856,6 +2087,8 @@ public partial class MainWindowViewModel : ObservableObject
     {
         IsDeleteConfirmationVisible = false;
         _isPermanentDelete = false;
+        _isEmptyRecycleBin = false;
+        _isDeleteFromBin = false;
     }
 
     [RelayCommand]
@@ -1869,6 +2102,44 @@ public partial class MainWindowViewModel : ObservableObject
             ? $"Permanently delete '{Path.GetFileName(paths[0])}'? This cannot be undone."
             : $"Permanently delete {paths.Count} items? This cannot be undone.";
         _isPermanentDelete = true;
+    }
+
+    /// <summary>True when the current view is the Recycle Bin (enables restore/empty actions).</summary>
+    public bool IsRecycleBinView => CurrentPath == VirtualPaths.RecycleBin;
+
+    /// <summary>
+    /// Restores the selected Recycle Bin items to their original locations.
+    /// Each selected item's Path is the original path (set by the loader).
+    /// </summary>
+    [RelayCommand]
+    private async Task RestoreSelectedAsync()
+    {
+        if (_recycleBinQuery is null || CurrentPath != VirtualPaths.RecycleBin) return;
+
+        var paths = GetSelectedPaths();
+        if (paths.Count == 0) return;
+
+        int restored = 0;
+        foreach (var original in paths)
+        {
+            if (await _recycleBinQuery.RestoreAsync(original))
+                restored++;
+        }
+
+        StatusText = restored == 0
+            ? "Nothing was restored."
+            : restored == 1 ? "Restored 1 item." : $"Restored {restored} items.";
+
+        LoadDirectory(VirtualPaths.RecycleBin);
+    }
+
+    /// <summary>Permanently empties the entire Recycle Bin (asks for confirmation via overlay).</summary>
+    [RelayCommand]
+    private void EmptyRecycleBin()
+    {
+        IsDeleteConfirmationVisible = true;
+        DeleteConfirmationMessage = "Permanently empty the Recycle Bin? This cannot be undone.";
+        _isEmptyRecycleBin = true;
     }
 
     [RelayCommand]
@@ -2211,9 +2482,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void SetViewMode(ExplorerViewMode mode)
     {
+        // The List and Tiles toolbar entries were removed; coerce any legacy/List value
+        // to Details so no view ever renders in the removed List mode.
+        if (mode == ExplorerViewMode.List)
+            mode = ExplorerViewMode.Details;
+
         ViewMode = mode;
         if (_tabService?.ActiveTab is not null)
             _tabService.ActiveTab.ViewMode = mode;
+
+        // Selecting a content view (Icons/Details) implies the explorer-only layout:
+        // leave Split/Terminal if we were in it.
+        if (LayoutMode != LayoutMode.ExplorerOnly)
+            _ = SetLayoutModeAsync(LayoutMode.ExplorerOnly);
     }
 
     [RelayCommand]
@@ -2226,6 +2507,204 @@ public partial class MainWindowViewModel : ObservableObject
         if (targetPath is null) return;
 
         await OpenTerminalAtDirectoryAsync(targetPath);
+    }
+
+    // --- Project commands in the context menu (Developer Mode / Nexus Actions entry point) ---
+
+    /// <summary>
+    /// Runnable project commands for the folder the user right-clicked, populated on demand by
+    /// <see cref="LoadProjectCommandsForAsync"/>. Bound to the "Project" submenu in the context menu.
+    /// </summary>
+    public ObservableCollection<ProjectCommand> ContextMenuProjectCommands { get; } = [];
+
+    /// <summary>True when the right-clicked folder exposes runnable project commands.</summary>
+    public bool HasContextMenuProjectCommands => ContextMenuProjectCommands.Count > 0;
+
+    /// <summary>
+    /// Detects the project at the given folder (if any) and refreshes
+    /// <see cref="ContextMenuProjectCommands"/> so the context menu can offer run/build actions.
+    /// Called just before the folder's context menu opens; detection is cached and root-only, so
+    /// it is cheap to call on each right-click. Non-directory items clear the list.
+    /// </summary>
+    public async Task LoadProjectCommandsForAsync(FileSystemItem? item)
+    {
+        ContextMenuProjectCommands.Clear();
+
+        if (_projectDetectionService is null
+            || item is null
+            || item.Type is not (FileSystemItemType.Directory or FileSystemItemType.Drive))
+        {
+            OnPropertyChanged(nameof(HasContextMenuProjectCommands));
+            return;
+        }
+
+        try
+        {
+            var info = await _projectDetectionService.DetectAsync(item.Path);
+            if (info is not null)
+            {
+                foreach (var command in info.Commands)
+                    ContextMenuProjectCommands.Add(command);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not load project commands for {Path}.", item.Path);
+        }
+
+        OnPropertyChanged(nameof(HasContextMenuProjectCommands));
+    }
+
+    // --- "New" submenu (Windows Shell integration) ---
+
+    /// <summary>
+    /// Dynamic entries for the context menu's "New" submenu, discovered from the OS shell (on
+    /// Windows, the registered ShellNew associations) plus Nexus's built-ins. Populated by
+    /// <see cref="LoadNewMenuItemsAsync"/> just before the context menu opens.
+    /// </summary>
+    public ObservableCollection<NewMenuItemViewModel> NewMenuItems { get; } = [];
+
+    /// <summary>True once the "New" submenu has at least one entry to show.</summary>
+    public bool HasNewMenuItems => NewMenuItems.Count > 0;
+
+    private bool _newMenuItemsLoaded;
+
+    /// <summary>
+    /// Loads the "New" submenu entries on demand. The underlying service caches its registry walk,
+    /// so this is cheap on repeat calls; discovery runs off the UI thread and the collection is only
+    /// touched here on the UI thread. Native type icons are resolved lazily afterwards so the menu
+    /// appears immediately. Fails safe: any error leaves whatever was already loaded intact.
+    /// </summary>
+    public async Task LoadNewMenuItemsAsync()
+    {
+        // Build once per session; the service's own cache handles association changes via
+        // InvalidateCache. Re-running on every right-click would needlessly rebuild the icons.
+        if (_newMenuItemsLoaded) return;
+
+        if (_shellNewTemplateService is null)
+        {
+            OnPropertyChanged(nameof(HasNewMenuItems));
+            return;
+        }
+
+        try
+        {
+            var definitions = await _shellNewTemplateService.GetNewItemsAsync();
+
+            NewMenuItems.Clear();
+            foreach (var def in definitions)
+                NewMenuItems.Add(new NewMenuItemViewModel(def));
+
+            _newMenuItemsLoaded = true;
+            OnPropertyChanged(nameof(HasNewMenuItems));
+
+            // Resolve native icons in the background; the UI shows the generic glyph until each
+            // one arrives. Only meaningful on Windows — elsewhere IconSource is null.
+            _ = ResolveNewMenuIconsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not load dynamic New menu items.");
+            OnPropertyChanged(nameof(HasNewMenuItems));
+        }
+    }
+
+    private async Task ResolveNewMenuIconsAsync()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        foreach (var vm in NewMenuItems.ToArray())
+        {
+            if (vm.Definition.IconSource is not string ext || string.IsNullOrEmpty(ext))
+                continue;
+
+            try
+            {
+                var bitmap = await Services.Thumbnails.WindowsShellIconExtractor
+                    .ExtractIconForExtensionAsync(ext, 16);
+                if (bitmap is not null)
+                    vm.Icon = bitmap;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not resolve New menu icon for {Ext}.", ext);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Creates the item described by a "New" menu entry in the current folder, then selects it.
+    /// Folders go through the existing CreateDirectory path; files go through the definition-aware
+    /// creation path (empty file, template copy, or inline data). Undo is recorded exactly like the
+    /// existing New Folder / New File flow.
+    /// </summary>
+    [RelayCommand]
+    private async Task CreateFromNewItemAsync(NewMenuItemViewModel? menuItem)
+    {
+        if (menuItem is null || string.IsNullOrEmpty(CurrentPath)) return;
+
+        var definition = menuItem.Definition;
+
+        if (definition.Kind == NewItemKind.Folder)
+        {
+            var (result, createdPath) = await _fileOpService.CreateDirectoryAsync(
+                CurrentPath, definition.DefaultBaseName);
+            await FinalizeCreationAsync(result, createdPath, isDirectory: true);
+            return;
+        }
+
+        var (fileResult, filePath) = await _fileOpService.CreateFromDefinitionAsync(CurrentPath, definition);
+        await FinalizeCreationAsync(fileResult, filePath, isDirectory: false);
+    }
+
+    /// <summary>
+    /// Shared post-creation handling: records undo, refreshes the folder, selects the new item, or
+    /// surfaces the error in the status bar — mirroring <see cref="ConfirmCreateAsync"/>.
+    /// </summary>
+    private async Task FinalizeCreationAsync(FileOperationResult result, string? createdPath, bool isDirectory)
+    {
+        if (result.Success && createdPath is not null)
+        {
+            var name = Path.GetFileName(createdPath);
+            _historyService.AddOperation(new UndoableOperation
+            {
+                Type = isDirectory ? UndoOperationType.CreateFolder : UndoOperationType.CreateFile,
+                Description = isDirectory ? $"Create folder '{name}'" : $"Create '{name}'",
+                Entries = [new UndoEntry { SourcePath = createdPath, DestinationPath = createdPath, IsDirectory = isDirectory }]
+            });
+            await RefreshCurrentDirectoryAsync();
+            var newItem = Items.FirstOrDefault(i => i.Name == name);
+            if (newItem is not null) SelectedItem = newItem;
+        }
+        else if (result.Error is not null)
+        {
+            StatusText = result.Error;
+        }
+    }
+
+    /// <summary>
+    /// Runs a project command in the integrated terminal: opens the terminal at the command's
+    /// working directory and submits the command line. This is the first concrete Nexus Actions
+    /// consumer; it reuses the existing terminal pipeline rather than spawning processes directly.
+    /// </summary>
+    [RelayCommand]
+    private async Task RunProjectCommandInTerminalAsync(ProjectCommand? command)
+    {
+        if (command is null) return;
+
+        var workingDir = command.WorkingDirectory;
+        if (string.IsNullOrWhiteSpace(workingDir) || !Directory.Exists(workingDir))
+        {
+            StatusText = "The project folder no longer exists.";
+            return;
+        }
+
+        await OpenTerminalAtDirectoryAsync(workingDir);
+
+        // Submit the command line to the shell (Enter is a trailing carriage return).
+        var line = command.DisplayCommand + "\r";
+        await Terminal.SendInputAsync(line);
+        StatusText = $"Running: {command.DisplayCommand}";
     }
 
     [RelayCommand]
@@ -2390,6 +2869,14 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task OpenItemAsync(FileSystemItem? item)
     {
         if (item is null) return;
+
+        // Recycle Bin entries have no live on-disk path; double-clicking shouldn't try to open
+        // or navigate into them. Offer restore via the context menu instead.
+        if (CurrentPath == VirtualPaths.RecycleBin)
+        {
+            StatusText = "Right-click a recycled item to restore it.";
+            return;
+        }
 
         if (item.Type is FileSystemItemType.Directory or FileSystemItemType.Drive)
         {
@@ -2618,7 +3105,15 @@ public partial class MainWindowViewModel : ObservableObject
         LayoutMode = tab.LayoutMode;
         SplitOrientation = tab.SplitOrientation;
         SplitRatio = tab.SplitRatio;   // uses clamped setter
-        ViewMode = tab.ViewMode;
+        // Coerce the removed List mode to Details for any tab saved before List was dropped.
+        ViewMode = tab.ViewMode == ExplorerViewMode.List ? ExplorerViewMode.Details : tab.ViewMode;
+
+        // Restore the Files/Project content mode for this tab and refresh Project Explorer.
+        ContentMode = tab.ContentMode;
+        if (ContentMode == ExplorerContentMode.Project)
+            _ = ProjectExplorer.LoadAsync(tab.CurrentPath);
+        else
+            ProjectExplorer.Clear();
         
         // Search, Sort, Group state
         SortMode = tab.SortMode;
@@ -2747,6 +3242,10 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 // Virtual view: all folders assigned a specific color, gathered from any location.
                 resultItems = await LoadColorGroupItemsAsync(path, ct);
+            }
+            else if (path == VirtualPaths.RecycleBin)
+            {
+                resultItems = await LoadRecycleBinItemsAsync(ct);
             }
             else
             {
@@ -3104,6 +3603,37 @@ public partial class MainWindowViewModel : ObservableObject
         }, ct);
     }
 
+    /// <summary>
+    /// Builds the item list for the Recycle Bin virtual view by enumerating the system bin.
+    /// Each entry's Path is its original location (used by Restore).
+    /// </summary>
+    private async Task<IEnumerable<FileSystemItem>> LoadRecycleBinItemsAsync(CancellationToken ct)
+    {
+        if (_recycleBinQuery is null || !_recycleBinQuery.IsSupported)
+        {
+            StatusText = "The Recycle Bin isn't available on this system.";
+            return Enumerable.Empty<FileSystemItem>();
+        }
+
+        var entries = await _recycleBinQuery.EnumerateAsync(ct);
+        ct.ThrowIfCancellationRequested();
+
+        var result = new List<FileSystemItem>(entries.Count);
+        foreach (var e in entries)
+        {
+            result.Add(new FileSystemItem
+            {
+                Name = e.Name,
+                Path = e.OriginalPath,
+                Type = e.IsDirectory ? FileSystemItemType.Directory : FileSystemItemType.File,
+                Size = e.Size,
+                LastModified = e.DeletedAt,
+                Extension = e.IsDirectory ? null : Path.GetExtension(e.Name)
+            });
+        }
+        return result;
+    }
+
     private IEnumerable<FileSystemItem> SortItems(IEnumerable<FileSystemItem> items)
     {
         var list = items.ToList();
@@ -3198,6 +3728,11 @@ public partial class MainWindowViewModel : ObservableObject
             PreviewFullPath = result.FullPath;
             PreviewImageWidth = result.ImageWidth;
             PreviewImageHeight = result.ImageHeight;
+            PreviewCreated = result.Created;
+
+            PreviewMetadata.Clear();
+            foreach (var entry in result.Metadata)
+                PreviewMetadata.Add(entry);
 
             if (result.ErrorMessage is not null)
             {
@@ -3230,6 +3765,8 @@ public partial class MainWindowViewModel : ObservableObject
         PreviewFullPath = null;
         PreviewImageWidth = null;
         PreviewImageHeight = null;
+        PreviewCreated = null;
+        PreviewMetadata.Clear();
         HasPreviewError = false;
         PreviewErrorMessage = null;
         IsPreviewLoading = false;
@@ -3242,7 +3779,7 @@ public partial class MainWindowViewModel : ObservableObject
         // Handle virtual paths
         if (VirtualPaths.IsVirtual(path))
         {
-            Breadcrumbs.Add(new BreadcrumbItem { Name = VirtualPaths.GetDisplayName(path), Path = path, IsLast = true });
+            Breadcrumbs.Add(new BreadcrumbItem { Name = VirtualPaths.GetDisplayName(path), Path = path, IsLast = true, IsFirst = true });
             return;
         }
 
@@ -3260,9 +3797,12 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         segments.Reverse();
-        // Mark the last segment for visual hierarchy
+        // Mark the last segment for visual hierarchy, and the first to drop its leading chevron.
         if (segments.Count > 0)
+        {
             segments[^1].IsLast = true;
+            segments[0].IsFirst = true;
+        }
         foreach (var segment in segments)
             Breadcrumbs.Add(segment);
     }
@@ -3313,6 +3853,13 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Name = "This PC",
             Path = VirtualPaths.ThisPC,
+            Kind = NavigationItemKind.SpecialLocation,
+            Section = NavigationSection.Locations
+        });
+        locations.Items.Add(new NavigationItem
+        {
+            Name = "Recycle Bin",
+            Path = VirtualPaths.RecycleBin,
             Kind = NavigationItemKind.SpecialLocation,
             Section = NavigationSection.Locations
         });
@@ -3376,14 +3923,18 @@ public partial class MainWindowViewModel : ObservableObject
         var group = colorsGroup ?? FindGroup(SidebarGroupIds.Colors);
         if (group is null || _folderColorService is null) return;
 
+        var presets = _folderColorService.GetPresetColors();
+        var allColors = _folderColorService.GetAllColors();
+        if (presets is null || allColors is null) return;
+
         group.Items.Clear();
 
-        var presetsByHex = _folderColorService.GetPresetColors()
+        var presetsByHex = presets
             .GroupBy(p => p.ColorHex, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.OrdinalIgnoreCase);
 
         // Distinct colors in use, ordered by name/hex for a stable list.
-        var usedColors = _folderColorService.GetAllColors().Values
+        var usedColors = allColors.Values
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(hex => presetsByHex.TryGetValue(hex, out var n) ? n : hex, StringComparer.OrdinalIgnoreCase);
 
@@ -3676,19 +4227,47 @@ public partial class MainWindowViewModel : ObservableObject
         ShowItemInfo = !ShowItemInfo;
     }
 
-    [RelayCommand]
-    private void SetThemeLight() => CurrentTheme = ThemeMode.Light;
+    /// <summary>
+    /// Maps any <see cref="ThemeMode"/> (including legacy Light/Dark/System) to one of the
+    /// four current themes, matching the normalization done by <see cref="ThemeService"/>.
+    /// </summary>
+    private static ThemeMode NormalizeTheme(ThemeMode mode) => mode switch
+    {
+        ThemeMode.RefinedMinimalism or
+        ThemeMode.ModernPastel or
+        ThemeMode.AdvancedHierarchy or
+        ThemeMode.ContextualDark => mode,
+        ThemeMode.Dark => ThemeMode.ContextualDark,
+        _ => ThemeMode.RefinedMinimalism
+    };
 
     [RelayCommand]
-    private void SetThemeDark() => CurrentTheme = ThemeMode.Dark;
+    private void SetThemeRefinedMinimalism() => CurrentTheme = ThemeMode.RefinedMinimalism;
 
     [RelayCommand]
-    private void SetThemeSystem() => CurrentTheme = ThemeMode.System;
+    private void SetThemeModernPastel() => CurrentTheme = ThemeMode.ModernPastel;
 
+    [RelayCommand]
+    private void SetThemeAdvancedHierarchy() => CurrentTheme = ThemeMode.AdvancedHierarchy;
+
+    [RelayCommand]
+    private void SetThemeContextualDark() => CurrentTheme = ThemeMode.ContextualDark;
+
+    /// <summary>
+    /// Cycles through the four themes in order (used by the toolbar quick-switch button).
+    /// </summary>
     [RelayCommand]
     private void ToggleTheme()
     {
-        CurrentTheme = CurrentTheme == ThemeMode.Dark ? ThemeMode.Light : ThemeMode.Dark;
+        CurrentTheme = CurrentTheme switch
+        {
+            ThemeMode.RefinedMinimalism => ThemeMode.ModernPastel,
+            ThemeMode.ModernPastel => ThemeMode.AdvancedHierarchy,
+            ThemeMode.AdvancedHierarchy => ThemeMode.ContextualDark,
+            ThemeMode.ContextualDark => ThemeMode.RefinedMinimalism,
+            // Legacy values collapse onto the cycle start
+            _ => ThemeMode.RefinedMinimalism
+        };
     }
 
     // --- Search logic ---

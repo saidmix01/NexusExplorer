@@ -6,6 +6,8 @@ using NexusExplorer.Infrastructure.FileSystem;
 using NexusExplorer.Infrastructure.Logging;
 using NexusExplorer.Infrastructure.Persistence;
 using NexusExplorer.Infrastructure.Preview;
+using NexusExplorer.Infrastructure.Projects;
+using NexusExplorer.Infrastructure.Projects.Detectors;
 using NexusExplorer.Platform;
 
 namespace NexusExplorer.Infrastructure.DependencyInjection;
@@ -36,6 +38,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOperationHistoryService, OperationHistoryService>();
         services.AddSingleton<IStatePersistenceService, StatePersistenceService>();
         services.AddSingleton<IFolderColorService, NexusExplorer.Infrastructure.Services.FolderColorService>();
+
+        // Project detection (Developer Mode: shared by Project Explorer, Nexus Actions, …).
+        // Add a new IProjectDetector here to support another ecosystem — no other code changes needed.
+        services.AddSingleton<IProjectDetector, NodeProjectDetector>();
+        services.AddSingleton<IProjectDetector, DotNetProjectDetector>();
+        services.AddSingleton<IProjectDetector, RustProjectDetector>();
+        services.AddSingleton<IProjectDetector, PythonProjectDetector>();
+        services.AddSingleton<IProjectDetectionService, ProjectDetectionService>();
 
         // Installed editor discovery / launch
         services.AddSingleton<IEditorService, EditorService>();

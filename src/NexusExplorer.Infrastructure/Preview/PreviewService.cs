@@ -112,13 +112,26 @@ public sealed class PreviewService : IPreviewService
         }
     }
 
-    private Task<PreviewResult> GetImagePreviewAsync(FileSystemItem item, CancellationToken cancellationToken)
+    private async Task<PreviewResult> GetImagePreviewAsync(FileSystemItem item, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         // For images, we pass the path and let the UI handle rendering.
-        // Try to read dimensions from the file header for metadata.
-        var result = new PreviewResult
+        // Read dimensions straight from the file header (cheap, no full decode).
+        var (width, height) = await Task.Run(
+            () => ImageDimensionReader.TryRead(item.Path), cancellationToken);
+
+        var metadata = new List<PreviewMetadataEntry>();
+        if (width is int w && height is int h)
+        {
+            metadata.Add(new("Dimensions", $"{w} × {h} px"));
+            var megaPixels = w * (double)h / 1_000_000d;
+            if (megaPixels >= 0.1)
+                metadata.Add(new("Resolution", $"{megaPixels:0.#} MP"));
+            metadata.Add(new("Aspect ratio", FormatAspectRatio(w, h)));
+        }
+
+        return new PreviewResult
         {
             Type = PreviewType.Image,
             ImagePath = item.Path,
@@ -126,10 +139,12 @@ public sealed class PreviewService : IPreviewService
             FileType = GetFileTypeDescription(item),
             FileSize = item.Size,
             LastModified = item.LastModified,
-            FullPath = item.Path
+            Created = item.Created,
+            FullPath = item.Path,
+            ImageWidth = width,
+            ImageHeight = height,
+            Metadata = metadata
         };
-
-        return Task.FromResult(result);
     }
 
     private async Task<PreviewResult> GetTextPreviewAsync(FileSystemItem item, CancellationToken cancellationToken)
@@ -169,6 +184,13 @@ public sealed class PreviewService : IPreviewService
             return reader.ReadToEnd();
         }, cancellationToken);
 
+        var lineCount = CountLines(content);
+        var metadata = new List<PreviewMetadataEntry>
+        {
+            new("Lines", lineCount.ToString("N0")),
+            new("Characters", content.Length.ToString("N0"))
+        };
+
         return new PreviewResult
         {
             Type = PreviewType.Text,
@@ -177,7 +199,9 @@ public sealed class PreviewService : IPreviewService
             FileType = GetFileTypeDescription(item),
             FileSize = item.Size,
             LastModified = item.LastModified,
-            FullPath = item.Path
+            Created = item.Created,
+            FullPath = item.Path,
+            Metadata = metadata
         };
     }
 
@@ -252,6 +276,13 @@ public sealed class PreviewService : IPreviewService
 
         var summary = FormatItemCounts(fileCount, folderCount);
 
+        var metadata = new List<PreviewMetadataEntry>
+        {
+            new("Folders", folderCount.ToString("N0")),
+            new("Files", fileCount.ToString("N0")),
+            new("Items", (folderCount + fileCount).ToString("N0"))
+        };
+
         return new PreviewResult
         {
             Type = PreviewType.Folder,
@@ -260,7 +291,9 @@ public sealed class PreviewService : IPreviewService
             FileType = summary,
             FileSize = null,
             LastModified = item.LastModified,
-            FullPath = item.Path
+            Created = item.Created,
+            FullPath = item.Path,
+            Metadata = metadata
         };
     }
 
@@ -328,5 +361,31 @@ public sealed class PreviewService : IPreviewService
             unitIndex++;
         }
         return $"{size:0.#} {units[unitIndex]}";
+    }
+
+    private static int CountLines(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return 0;
+        var lines = 1;
+        foreach (var c in content)
+            if (c == '\n') lines++;
+        return lines;
+    }
+
+    /// <summary>Reduces a width×height pair to a readable aspect ratio (e.g. "16 : 9").</summary>
+    private static string FormatAspectRatio(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return "—";
+        var gcd = Gcd(width, height);
+        return $"{width / gcd} : {height / gcd}";
+    }
+
+    private static int Gcd(int a, int b)
+    {
+        while (b != 0)
+        {
+            (a, b) = (b, a % b);
+        }
+        return a == 0 ? 1 : a;
     }
 }

@@ -11,18 +11,7 @@ public sealed class FolderColorService : IFolderColorService
     private readonly string _filePath;
     private Dictionary<string, string> _colors = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly List<FolderColorOption> Presets =
-    [
-        new() { Name = "Blue", ColorHex = "#4A9FDE" },
-        new() { Name = "Red", ColorHex = "#E05555" },
-        new() { Name = "Green", ColorHex = "#4CAF50" },
-        new() { Name = "Orange", ColorHex = "#FF9800" },
-        new() { Name = "Purple", ColorHex = "#9C27B0" },
-        new() { Name = "Pink", ColorHex = "#E91E63" },
-        new() { Name = "Teal", ColorHex = "#009688" },
-        new() { Name = "Yellow", ColorHex = "#FFC107" },
-        new() { Name = "Gray", ColorHex = "#78909C" },
-    ];
+    private static IReadOnlyList<FolderColorOption> Presets => FolderColorOption.Presets;
 
     public event EventHandler<string>? ColorChanged;
 

@@ -282,6 +282,20 @@ public sealed class IsDirectoryConverter : IValueConverter
 }
 
 /// <summary>
+/// Returns true when the FileSystemItemType is NOT a Drive (inverse of IsDriveTypeConverter).
+/// </summary>
+public sealed class IsNonDriveConverter : IValueConverter
+{
+    public static readonly IsNonDriveConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is not NexusExplorer.Core.Models.FileSystemItemType.Drive;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
 /// Returns true if the FileSystemItemType is Drive.
 /// </summary>
 public sealed class IsDriveTypeConverter : IValueConverter
@@ -329,6 +343,60 @@ public sealed class DriveSpaceInfoConverter : IValueConverter
 }
 
 /// <summary>
+/// Returns a status brush for a drive's usage bar based on how full it is:
+/// green/accent when there's plenty of room, amber when getting full, red when nearly full.
+/// </summary>
+public sealed class DriveUsageBrushConverter : IValueConverter
+{
+    public static readonly DriveUsageBrushConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        double pct = value switch
+        {
+            NexusExplorer.Core.Models.FileSystemItem item => item.UsagePercent,
+            double d => d,
+            _ => 0
+        };
+
+        var hex = pct >= 90 ? "#E53935"   // red: critically full
+                : pct >= 75 ? "#FB8C00"   // amber: getting full
+                : "#43A047";              // green: healthy
+        return new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(hex));
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Short free-space label for a drive, e.g. "54.8 GB free".
+/// </summary>
+public sealed class DriveFreeTextConverter : IValueConverter
+{
+    public static readonly DriveFreeTextConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is NexusExplorer.Core.Models.FileSystemItem item && item.FreeSpace.HasValue)
+            return $"{FormatSize(item.FreeSpace.Value)} free";
+        return string.Empty;
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] suf = { "B", "KB", "MB", "GB", "TB" };
+        if (bytes == 0) return "0 B";
+        var place = System.Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
+        var num = Math.Round(bytes / Math.Pow(1024, place), 1);
+        return $"{num} {suf[place]}";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
 /// Returns true if the FileSystemItem is an image file (for enabling thumbnail in list/details views).
 /// Checks file extension against common image formats.
 /// </summary>
@@ -354,6 +422,28 @@ public sealed class IsImageFileConverter : IValueConverter
         }
 
         return false;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Converts a color hex string to a brush. An empty/null hex (the "Default" folder-color
+/// menu entry) yields a transparent brush so the swatch renders as an empty ring.
+/// </summary>
+public sealed class ColorHexToBrushConverter : IValueConverter
+{
+    public static readonly ColorHexToBrushConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is string hex && !string.IsNullOrWhiteSpace(hex))
+        {
+            try { return new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(hex)); }
+            catch { /* fall through to transparent */ }
+        }
+        return Avalonia.Media.Brushes.Transparent;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

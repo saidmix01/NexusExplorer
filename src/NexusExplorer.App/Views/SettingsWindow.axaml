@@ -2,116 +2,312 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NexusExplorer.App.ViewModels"
         xmlns:models="using:NexusExplorer.Core.Models"
+        xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
         x:Class="NexusExplorer.App.Views.SettingsWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Settings"
-        Width="560" Height="640"
+        Width="720" Height="620"
+        MinWidth="640" MinHeight="520"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        Background="{DynamicResource NexusBackground}">
+        CanResize="True"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="38"
+        Background="Transparent"
+        SystemDecorations="None"
+        TransparencyLevelHint="AcrylicBlur, Mica, Blur">
 
     <Window.Styles>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
         </Style>
         <Style Selector="TextBlock.muted">
-            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
             <Setter Property="FontSize" Value="12" />
         </Style>
         <Style Selector="Border.card">
-            <Setter Property="BorderBrush" Value="{DynamicResource NexusBorder}" />
+            <Setter Property="Background" Value="{DynamicResource NexusGlassSurface}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusGlassBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="16" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="18" />
         </Style>
         <Style Selector="Border.shortcut">
+            <Setter Property="Background" Value="{DynamicResource NexusInputBackground}" />
             <Setter Property="BorderBrush" Value="{DynamicResource NexusBorder}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,7" />
             <Setter Property="MinWidth" Value="120" />
+        </Style>
+
+        <!-- Left rail pills -->
+        <Style Selector="RadioButton.railTab">
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="8,2" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Pill" CornerRadius="10" Background="Transparent"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.railTab:pointerover /template/ Border#Pill">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="RadioButton.railTab:checked /template/ Border#Pill">
+            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+        </Style>
+        <Style Selector="RadioButton.railTab:checked">
+            <Setter Property="Foreground" Value="{DynamicResource NexusText}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- Caption buttons -->
+        <Style Selector="Button.captionBtn">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons,Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="9" />
+        </Style>
+        <Style Selector="Button.captionBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="Button.captionClose:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E81123" />
+            <Setter Property="TextElement.Foreground" Value="White" />
+        </Style>
+
+        <Style Selector="Button.accentBtn">
+            <Setter Property="Background" Value="{DynamicResource NexusAccent}" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusAccentForeground}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16,7" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
     </Window.Styles>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="24" Spacing="16">
-        <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" />
+    <!-- Rounded glass shell with a 1px gutter so the corners don't reveal the desktop -->
+    <Border CornerRadius="12" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
+            Margin="1" ClipToBounds="True">
+        <Panel>
+            <ExperimentalAcrylicBorder IsHitTestVisible="False">
+                <ExperimentalAcrylicBorder.Material>
+                    <ExperimentalAcrylicMaterial
+                        BackgroundSource="Digger"
+                        TintColor="{DynamicResource NexusAcrylicTint}"
+                        TintOpacity="1"
+                        MaterialOpacity="{DynamicResource NexusAcrylicOpacity}" />
+                </ExperimentalAcrylicBorder.Material>
+            </ExperimentalAcrylicBorder>
 
-        <!-- Appearance -->
-        <TextBlock Text="Appearance" FontSize="16" FontWeight="SemiBold" />
-        <Border Classes="card">
-            <StackPanel Spacing="10">
-                <TextBlock Text="Theme" FontWeight="SemiBold" FontSize="14" />
-                <TextBlock Text="Choose how Nexus Explorer looks." Classes="muted" />
-                <StackPanel Orientation="Horizontal" Spacing="18">
-                    <RadioButton Content="Light" GroupName="Theme"
-                                 IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.Light}, Mode=TwoWay}" />
-                    <RadioButton Content="Dark" GroupName="Theme"
-                                 IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.Dark}, Mode=TwoWay}" />
-                    <RadioButton Content="System" GroupName="Theme"
-                                 IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.System}, Mode=TwoWay}" />
-                </StackPanel>
-            </StackPanel>
-        </Border>
+            <Grid RowDefinitions="Auto,Auto,*">
 
-        <!-- Default file manager -->
-        <TextBlock Text="Default File Manager" FontSize="16" FontWeight="SemiBold" />
-        <Border Classes="card">
-            <StackPanel Spacing="10">
-                <TextBlock Text="Make folders and drives open in Nexus Explorer when you double-click them, and open Nexus with Win + E. You can restore the built-in Windows Explorer at any time."
-                           Classes="muted" TextWrapping="Wrap" />
+                <!-- Custom title bar -->
+                <Border Grid.Row="0" Name="TitleBarArea" Background="Transparent" Padding="12,6,8,4">
+                    <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="30">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Image Source="/Assets/icon.png" Width="15" Height="15" Opacity="0.7" />
+                            <TextBlock Text="Settings" FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource NexusTextSecondary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Name="MinimizeButton" Classes="captionBtn" Content="&#xE921;"
+                                    ToolTip.Tip="Minimize" Click="MinimizeButton_Click" />
+                            <Button Name="CloseButton" Classes="captionBtn captionClose" Content="&#xE8BB;"
+                                    ToolTip.Tip="Close" Click="Close_Click" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
 
-                <TextBlock Text="Nexus Explorer is your default file manager."
-                           FontWeight="SemiBold" FontSize="13" Foreground="#4CAF50"
-                           IsVisible="{Binding IsDefaultExplorer}" />
-                <TextBlock Text="Nexus Explorer is not the default file manager."
-                           Classes="muted" IsVisible="{Binding !IsDefaultExplorer}" />
+                <!-- Header -->
+                <Border Grid.Row="1" Padding="24,6,24,14" Background="Transparent">
+                    <TextBlock Text="Settings" FontSize="24" FontWeight="SemiBold"
+                               Foreground="{DynamicResource NexusText}" />
+                </Border>
 
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <Button Content="Set as Default Explorer" Command="{Binding SetAsDefaultExplorerCommand}" />
-                    <Button Content="Restore Windows Explorer" Command="{Binding RestoreDefaultExplorerCommand}" />
-                </StackPanel>
-
-                <TextBlock Text="Note: Windows does not allow fully replacing the taskbar's File Explorer button; this covers folder/drive double-click and Win + E."
-                           Classes="muted" TextWrapping="Wrap" FontSize="11" />
-            </StackPanel>
-        </Border>
-
-        <StackPanel Spacing="4">
-            <TextBlock Text="Keyboard Shortcuts" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock Text="GLOBAL" Classes="section" />
-        </StackPanel>
-
-        <Border Classes="card">
-            <StackPanel Spacing="10">
-                <TextBlock Text="Open Nexus Explorer" FontWeight="SemiBold" FontSize="14" />
-                <TextBlock Text="Open Nexus Explorer from anywhere in Windows." Classes="muted" />
-
-                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <Border Classes="shortcut">
-                        <TextBlock Text="{Binding GlobalHotkeyShortcut}" FontSize="14" />
+                <!-- Rail + content -->
+                <Grid Grid.Row="2" ColumnDefinitions="190,*" ClipToBounds="True">
+                    <!-- Left rail -->
+                    <Border Grid.Column="0" Background="Transparent"
+                            BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="0,0,1,0">
+                        <StackPanel Margin="8,2,0,0">
+                            <RadioButton Classes="railTab" GroupName="SettingsTabs"
+                                         IsChecked="{Binding SettingsTabIndex, Converter={x:Static vm:IntEqualsConverter.Instance}, ConverterParameter=0, Mode=TwoWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <fluent:SymbolIcon Symbol="PaintBrush" FontSize="16" />
+                                    <TextBlock Text="Appearance" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Classes="railTab" GroupName="SettingsTabs"
+                                         IsChecked="{Binding SettingsTabIndex, Converter={x:Static vm:IntEqualsConverter.Instance}, ConverterParameter=1, Mode=TwoWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <fluent:SymbolIcon Symbol="Folder" FontSize="16" />
+                                    <TextBlock Text="Default Manager" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Classes="railTab" GroupName="SettingsTabs"
+                                         IsChecked="{Binding SettingsTabIndex, Converter={x:Static vm:IntEqualsConverter.Instance}, ConverterParameter=2, Mode=TwoWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <fluent:SymbolIcon Symbol="Keyboard" FontSize="16" />
+                                    <TextBlock Text="Shortcuts" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
                     </Border>
-                    <Button Content="Change" Command="{Binding StartGlobalHotkeyCaptureCommand}"
-                            IsVisible="{Binding !IsGlobalHotkeyCapturing}" />
-                    <Button Content="Cancel" Command="{Binding CancelGlobalHotkeyCaptureCommand}"
-                            IsVisible="{Binding IsGlobalHotkeyCapturing}" />
-                </StackPanel>
 
-                <TextBlock Text="{Binding GlobalHotkeyStatus}" Foreground="Orange" TextWrapping="Wrap" />
+                    <!-- Content -->
+                    <Panel Grid.Column="1" ClipToBounds="True">
 
-                <CheckBox Content="Enable global shortcut" IsChecked="{Binding GlobalHotkeyEnabled, Mode=TwoWay}"
-                          IsCheckedChanged="EnableHotkey_Changed" />
-                <Button Content="Reset to Default" Command="{Binding ResetGlobalHotkeyCommand}"
-                        HorizontalAlignment="Left" />
-            </StackPanel>
-        </Border>
+                        <!-- ===== APPEARANCE ===== -->
+                        <ScrollViewer
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                      IsVisible="{Binding SettingsTabIndex, Converter={x:Static vm:IntEqualsConverter.Instance}, ConverterParameter=0}">
+                            <StackPanel Spacing="14" Margin="22,6,22,22">
+                                <TextBlock Text="Theme" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource NexusText}" />
+                                <TextBlock Text="Choose how Nexus Explorer looks. Each theme restyles the whole app." Classes="muted" TextWrapping="Wrap" />
+                                <Border Classes="card">
+                                    <StackPanel Spacing="10">
+                                        <RadioButton GroupName="Theme"
+                                                     IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.RefinedMinimalism}, Mode=TwoWay}">
+                                            <StackPanel Spacing="1">
+                                                <TextBlock Text="Refined Minimalism" FontWeight="SemiBold" FontSize="13" />
+                                                <TextBlock Text="Light monochrome palette, blue accent, low visual noise." Classes="muted" FontSize="11" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                        <RadioButton GroupName="Theme"
+                                                     IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.ModernPastel}, Mode=TwoWay}">
+                                            <StackPanel Spacing="1">
+                                                <TextBlock Text="Modern Pastel" FontWeight="SemiBold" FontSize="13" />
+                                                <TextBlock Text="Warm cream surfaces, amber accent, pastel folder accents." Classes="muted" FontSize="11" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                        <RadioButton GroupName="Theme"
+                                                     IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.AdvancedHierarchy}, Mode=TwoWay}">
+                                            <StackPanel Spacing="1">
+                                                <TextBlock Text="Advanced Hierarchy" FontWeight="SemiBold" FontSize="13" />
+                                                <TextBlock Text="Clean dense layout, teal accent, built for productivity." Classes="muted" FontSize="11" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                        <RadioButton GroupName="Theme"
+                                                     IsChecked="{Binding CurrentTheme, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter={x:Static models:ThemeMode.ContextualDark}, Mode=TwoWay}">
+                                            <StackPanel Spacing="1">
+                                                <TextBlock Text="Contextual Dark" FontWeight="SemiBold" FontSize="13" />
+                                                <TextBlock Text="Deep slate dark surfaces, indigo accent, preview-focused." Classes="muted" FontSize="11" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
 
-        <TextBlock Text="Windows reserves Win + E for File Explorer. Nexus uses Ctrl + Alt + E by default."
-                   Classes="muted" TextWrapping="Wrap" />
+                        <!-- ===== DEFAULT FILE MANAGER ===== -->
+                        <ScrollViewer
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                      IsVisible="{Binding SettingsTabIndex, Converter={x:Static vm:IntEqualsConverter.Instance}, ConverterParameter=1}">
+                            <StackPanel Spacing="14" Margin="22,6,22,22">
+                                <TextBlock Text="Startup" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource NexusText}" />
+                                <Border Classes="card">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Launch Nexus Explorer automatically when you sign in to Windows. It starts minimized to the system tray."
+                                                   Classes="muted" TextWrapping="Wrap" />
+                                        <CheckBox Content="Start Nexus Explorer with Windows"
+                                                  IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
+                                                  IsEnabled="{Binding CanStartWithWindows}"
+                                                  IsCheckedChanged="StartWithWindows_Changed" />
+                                        <TextBlock Text="Not available in the Microsoft Store version."
+                                                   Classes="muted" FontSize="11"
+                                                   IsVisible="{Binding !CanStartWithWindows}" />
+                                    </StackPanel>
+                                </Border>
 
-        <Button Content="Close" HorizontalAlignment="Right" Click="Close_Click" MinWidth="90" />
-    </StackPanel>
-    </ScrollViewer>
+                                <TextBlock Text="Default File Manager" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource NexusText}" />
+                                <Border Classes="card">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="Make folders and drives open in Nexus Explorer when you double-click them, and open Nexus with Win + E. You can restore the built-in Windows Explorer at any time."
+                                                   Classes="muted" TextWrapping="Wrap" />
+
+                                        <!-- Microsoft Store (MSIX) build: registry-based replacement can't work. -->
+                                        <TextBlock Text="This option isn't available in the Microsoft Store version: Windows doesn't let Store apps replace File Explorer. You can still pin Nexus Explorer to the taskbar or launch it from Run (Win + R) with &quot;nexusexplorer&quot;."
+                                                   Classes="muted" TextWrapping="Wrap"
+                                                   IsVisible="{Binding !CanSetDefaultExplorer}" />
+
+                                        <StackPanel Spacing="12" IsVisible="{Binding CanSetDefaultExplorer}">
+                                            <TextBlock Text="Nexus Explorer is your default file manager."
+                                                       FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource NexusSuccess}"
+                                                       IsVisible="{Binding IsDefaultExplorer}" />
+                                            <TextBlock Text="Nexus Explorer is not the default file manager."
+                                                       Classes="muted" IsVisible="{Binding !IsDefaultExplorer}" />
+
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <Button Content="Set as Default Explorer" Command="{Binding SetAsDefaultExplorerCommand}" />
+                                                <Button Content="Restore Windows Explorer" Command="{Binding RestoreDefaultExplorerCommand}" />
+                                            </StackPanel>
+
+                                            <TextBlock Text="Note: Windows does not allow fully replacing the taskbar's File Explorer button; this covers folder/drive double-click and Win + E."
+                                                       Classes="muted" TextWrapping="Wrap" FontSize="11" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- ===== KEYBOARD SHORTCUTS ===== -->
+                        <ScrollViewer
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                      IsVisible="{Binding SettingsTabIndex, Converter={x:Static vm:IntEqualsConverter.Instance}, ConverterParameter=2}">
+                            <StackPanel Spacing="14" Margin="22,6,22,22">
+                                <TextBlock Text="Keyboard Shortcuts" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource NexusText}" />
+                                <TextBlock Text="GLOBAL" Classes="section" />
+                                <Border Classes="card">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="Open Nexus Explorer" FontWeight="SemiBold" FontSize="14" />
+                                        <TextBlock Text="Open Nexus Explorer from anywhere in Windows." Classes="muted" />
+
+                                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <Border Classes="shortcut">
+                                                <TextBlock Text="{Binding GlobalHotkeyShortcut}" FontSize="14" />
+                                            </Border>
+                                            <Button Content="Change" Command="{Binding StartGlobalHotkeyCaptureCommand}"
+                                                    IsVisible="{Binding !IsGlobalHotkeyCapturing}" />
+                                            <Button Content="Cancel" Command="{Binding CancelGlobalHotkeyCaptureCommand}"
+                                                    IsVisible="{Binding IsGlobalHotkeyCapturing}" />
+                                        </StackPanel>
+
+                                        <TextBlock Text="{Binding GlobalHotkeyStatus}" Foreground="{DynamicResource NexusWarning}" TextWrapping="Wrap" />
+
+                                        <CheckBox Content="Enable global shortcut" IsChecked="{Binding GlobalHotkeyEnabled, Mode=TwoWay}"
+                                                  IsCheckedChanged="EnableHotkey_Changed" />
+                                        <Button Content="Reset to Default" Command="{Binding ResetGlobalHotkeyCommand}"
+                                                HorizontalAlignment="Left" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock Text="Windows reserves Win + E for File Explorer. Nexus uses Ctrl + Alt + E by default."
+                                           Classes="muted" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Panel>
+                </Grid>
+            </Grid>
+        </Panel>
+    </Border>
 </Window>
+
+
+

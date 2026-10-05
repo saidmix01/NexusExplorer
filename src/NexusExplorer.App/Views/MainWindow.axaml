@@ -15,7 +15,8 @@
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="38"
         Background="Transparent"
-        SystemDecorations="Full"
+        SystemDecorations="None"
+        TransparencyLevelHint="AcrylicBlur, Mica, Blur"
         Icon="/Assets/icon.png">
 
     <Design.DataContext>
@@ -58,38 +59,24 @@
             <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
         </Style>
         <Style Selector="Button.navBtn">
-            <Setter Property="Background" Value="{DynamicResource NexusNavGroupBackground}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource NexusNavBtnBorder}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,6" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="MinWidth" Value="32" />
-            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="MinWidth" Value="34" />
+            <Setter Property="MinHeight" Value="32" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.navBtn:pointerover /template/ ContentPresenter">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="{DynamicResource NexusNavBtnHoverStart}" Offset="0" />
-                        <GradientStop Color="{DynamicResource NexusNavBtnHoverEnd}" Offset="1" />
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
         </Style>
         <Style Selector="Button.navBtn:pressed /template/ ContentPresenter">
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="{DynamicResource NexusNavBtnPressedStart}" Offset="0" />
-                        <GradientStop Color="{DynamicResource NexusNavBtnPressedEnd}" Offset="1" />
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
         </Style>
         <Style Selector="Button.navBtn:disabled">
             <Setter Property="Opacity" Value="0.35" />
@@ -123,11 +110,56 @@
             <Setter Property="Foreground" Value="{DynamicResource NexusSegBtnForeground}" />
         </Style>
         <Style Selector="Button.segBtnFirst">
-            <Setter Property="CornerRadius" Value="8,0,0,8" />
+            <Setter Property="CornerRadius" Value="10,0,0,10" />
         </Style>
         <Style Selector="Button.segBtnLast">
-            <Setter Property="CornerRadius" Value="0,8,8,0" />
+            <Setter Property="CornerRadius" Value="0,10,10,0" />
             <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <!-- ======== COMPACT FLYOUT PRESENTER (icon-only popups) ======== -->
+        <Style Selector="FlyoutPresenter.compactFlyout">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MaxWidth" Value="200" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource NexusDialogBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource NexusBorderLight}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <!-- ======== UNIFORM TOOLBAR ICON BUTTON (right cluster) ======== -->
+        <Style Selector="Button.toolIcon">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.toolIcon fluent|SymbolIcon">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
+        </Style>
+        <Style Selector="Button.toolIcon:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="Button.toolIcon:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+        </Style>
+
+        <!-- ======== THIN VERTICAL TOOLBAR SEPARATOR ======== -->
+        <Style Selector="Rectangle.toolSep">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Margin" Value="6,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource NexusBorderLight}" />
         </Style>
 
         <!-- ======== SIDEBAR ======== -->
@@ -165,13 +197,13 @@
 
         <!-- ======== SEARCH BOX (pill, accent on focus) ======== -->
         <Style Selector="TextBox.searchBox">
-            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="CornerRadius" Value="16" />
             <Setter Property="BorderBrush" Value="{DynamicResource NexusSearchBorder}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Background" Value="{DynamicResource NexusSearchBackground}" />
-            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Padding" Value="10,6" />
             <Setter Property="FontSize" Value="12" />
-            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="MinHeight" Value="32" />
         </Style>
         <Style Selector="TextBox.searchBox:focus">
             <Setter Property="BorderBrush" Value="{DynamicResource NexusSearchFocusBorder}" />
@@ -210,14 +242,69 @@
             <Setter Property="BorderBrush" Value="{DynamicResource NexusFocusBorder}" />
         </Style>
 
-        <!-- ======== TAB PILLS (glassmorphism, accent indicator) ======== -->
+        <!-- ======== BROWSER-STYLE TABS (uniform, rounded top, accent underline) ======== -->
         <Style Selector="Border.tabItem">
-            <Setter Property="Padding" Value="14,6,10,6" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="MinWidth" Value="80" />
-            <Setter Property="MaxWidth" Value="200" />
-            <Setter Property="Margin" Value="3,0,0,0" />
+            <Setter Property="Width" Value="150" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="10,0,6,0" />
+            <Setter Property="CornerRadius" Value="10,10,0,0" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.tabItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="Border.tabItem.active, Border.tabItem.active:pointerover">
+            <Setter Property="Background" Value="{DynamicResource NexusGlassSurface}" />
+        </Style>
+
+        <Style Selector="Border.tabItem fluent|SymbolIcon.tabIcon">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+        </Style>
+        <Style Selector="Border.tabItem.active fluent|SymbolIcon.tabIcon">
+            <Setter Property="Foreground" Value="{DynamicResource NexusAccent}" />
+        </Style>
+
+        <Style Selector="Border.tabItem TextBlock.tabTitle">
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
+        </Style>
+        <Style Selector="Border.tabItem.active TextBlock.tabTitle">
+            <Setter Property="Foreground" Value="{DynamicResource NexusText}" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+
+        <Style Selector="Border.tabItem Border.tabIndicator">
+            <Setter Property="Height" Value="2" />
+            <Setter Property="CornerRadius" Value="1" />
+            <Setter Property="Margin" Value="2,0,26,0" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Background" Value="{DynamicResource NexusAccent}" />
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Border.tabItem.active Border.tabIndicator">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <Style Selector="Button.tabClose">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons,Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusTabCloseButton}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.tabClose:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
         </Style>
 
         <!-- ======== FILE GRID / LIST SELECTION ======== -->
@@ -227,12 +314,15 @@
 
         <Style Selector="ListBox.fileListBox ListBoxItem:selected /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource NexusSelection}" />
+            <Setter Property="CornerRadius" Value="10" />
         </Style>
         <Style Selector="ListBox.fileListBox ListBoxItem:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+            <Setter Property="CornerRadius" Value="10" />
         </Style>
         <Style Selector="ListBox.fileListBox ListBoxItem:selected:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource NexusSelectionHover}" />
+            <Setter Property="CornerRadius" Value="10" />
         </Style>
     </Window.Styles>
 
@@ -240,19 +330,45 @@
     <!-- MAIN LAYOUT                                                   -->
     <!-- ============================================================ -->
     <Panel>
-        <!-- Window chrome background with brushed metal gradient -->
-        <Border CornerRadius="6" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="0.5" BoxShadow="0 2 8 0 #20000000">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                    <GradientStop Color="{DynamicResource NexusChromeGradientStart}" Offset="0.0" />
-                    <GradientStop Color="{DynamicResource NexusChromeGradientMid1}" Offset="0.03" />
-                    <GradientStop Color="{DynamicResource NexusChromeGradientMid2}" Offset="0.05" />
-                    <GradientStop Color="{DynamicResource NexusChromeGradientMid3}" Offset="0.1" />
-                    <GradientStop Color="{DynamicResource NexusChromeGradientEnd}" Offset="1.0" />
-                </LinearGradientBrush>
-            </Border.Background>
+        <!-- Resize grips (SystemDecorations=None removes OS resize borders).
+             These sit in the transparent outer margin around the rounded shell. -->
+        <Grid Name="ResizeGripLayer" IsVisible="True"
+              RowDefinitions="6,*,6" ColumnDefinitions="6,*,6">
+            <Grid.Styles>
+                <Style Selector="Border.grip">
+                    <Setter Property="Background" Value="Transparent" />
+                </Style>
+            </Grid.Styles>
+            <Border Grid.Row="0" Grid.Column="0" Classes="grip" Cursor="TopLeftCorner" Tag="NorthWest" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border Grid.Row="0" Grid.Column="1" Classes="grip" Cursor="SizeNorthSouth" Tag="North" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border Grid.Row="0" Grid.Column="2" Classes="grip" Cursor="TopRightCorner" Tag="NorthEast" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border Grid.Row="1" Grid.Column="0" Classes="grip" Cursor="SizeWestEast" Tag="West" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border Grid.Row="1" Grid.Column="2" Classes="grip" Cursor="SizeWestEast" Tag="East" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border Grid.Row="2" Grid.Column="0" Classes="grip" Cursor="BottomLeftCorner" Tag="SouthWest" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border Grid.Row="2" Grid.Column="1" Classes="grip" Cursor="SizeNorthSouth" Tag="South" PointerPressed="ResizeGrip_PointerPressed" />
+            <Border Grid.Row="2" Grid.Column="2" Classes="grip" Cursor="BottomRightCorner" Tag="SouthEast" PointerPressed="ResizeGrip_PointerPressed" />
+        </Grid>
 
-            <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <!-- Window chrome: rounded glass shell. The outer margin lets the rounded
+             corners + drop shadow float over the transparent window background.
+             Margin/CornerRadius are flattened to 0 when maximized (code-behind). -->
+        <Border Name="ChromeBorder"
+                Margin="1"
+                CornerRadius="12" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
+                ClipToBounds="True">
+            <Panel>
+                <!-- Real blur backdrop (acrylic/mica) -->
+                <ExperimentalAcrylicBorder IsHitTestVisible="False">
+                    <ExperimentalAcrylicBorder.Material>
+                        <ExperimentalAcrylicMaterial
+                            BackgroundSource="Digger"
+                            TintColor="{DynamicResource NexusAcrylicTint}"
+                            TintOpacity="1"
+                            MaterialOpacity="{DynamicResource NexusAcrylicOpacity}" />
+                    </ExperimentalAcrylicBorder.Material>
+                </ExperimentalAcrylicBorder>
+
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
 
                 <!-- ====================================================== -->
                 <!-- ROW 0: UNIFIED TITLEBAR + TABS (macOS style)            -->
@@ -260,14 +376,8 @@
                 <!-- ====================================================== -->
                 <Border Grid.Row="0" IsHitTestVisible="True"
                         Name="TitleBarArea"
-                        Padding="0,4,0,0"
-                        BorderBrush="{DynamicResource NexusTabBarBorder}" BorderThickness="0,0,0,1">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                            <GradientStop Color="{DynamicResource NexusTitleBarGradientStart}" Offset="0" />
-                            <GradientStop Color="{DynamicResource NexusTitleBarGradientEnd}" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.Background>
+                        Padding="0,6,0,0"
+                        Background="Transparent">
                     <Grid ColumnDefinitions="Auto,Auto,*,Auto" MinHeight="40">
                         <!-- LEFT: Traffic light buttons (close/minimize/maximize) -->
                         <!-- LEFT: App icon (subtle branding) -->
@@ -279,67 +389,72 @@
                         <!-- Small gap before tabs -->
                         <Panel Grid.Column="1" Width="8" />
 
-                        <!-- TABS: Pill tabs + New tab button (scrollable for overflow) -->
+                        <!-- TABS: browser-style tabs (equal width) + New tab button (scrollable for overflow) -->
                         <ScrollViewer Grid.Column="2"
                                       HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollBarVisibility="Disabled"
-                                      VerticalAlignment="Center"
-                                      Margin="0,4,0,4"
+                                      VerticalAlignment="Bottom"
                                       Name="TabScrollViewer"
                                       PointerWheelChanged="TabScroll_PointerWheelChanged">
-                            <StackPanel Orientation="Horizontal" Spacing="4"
+                            <StackPanel Orientation="Horizontal" Spacing="2"
                                         Name="TabBarArea"
                                         DoubleTapped="TabBar_DoubleTapped">
-                                <!-- Tab pills -->
                                 <ItemsControl ItemsSource="{Binding Tabs}" Name="TabItemsControl">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                            <StackPanel Orientation="Horizontal" Spacing="2" />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border Classes="tabItem"
-                                                    Background="{Binding IsActive, Converter={x:Static vm:TabActiveBackgroundConverter.Instance}}"
-                                                    BorderThickness="1.5"
+                                                    Classes.active="{Binding IsActive}"
                                                     PointerPressed="Tab_PointerPressed"
                                                     PointerMoved="Tab_PointerMoved"
                                                     PointerReleased="Tab_PointerReleased"
                                                     DragDrop.AllowDrop="True"
                                                     DragDrop.DragOver="TabItem_DragOver"
-                                                    DragDrop.Drop="TabItem_Drop">
-                                                <Border.BorderBrush>
-                                                    <MultiBinding Converter="{x:Static vm:FolderColorTabBorderMultiConverter.Instance}">
-                                                        <Binding Path="FolderColor" />
-                                                        <Binding Path="IsActive" />
-                                                    </MultiBinding>
-                                                </Border.BorderBrush>
+                                                    DragDrop.Drop="TabItem_Drop"
+                                                    ToolTip.Tip="{Binding Title}">
                                                 <Border.ContextMenu>
                                                     <ContextMenu>
-                                                        <MenuItem Header="Duplicate Tab" Click="TabCtx_DuplicateTab" />
+                                                        <MenuItem Header="Duplicate Tab" Click="TabCtx_DuplicateTab">
+                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="TabAdd" /></MenuItem.Icon>
+                                                        </MenuItem>
                                                         <Separator />
-                                                        <MenuItem Header="Close Tab" Click="TabCtx_CloseTab" />
-                                                        <MenuItem Header="Close Other Tabs" Click="TabCtx_CloseOtherTabs" />
-                                                        <MenuItem Header="Close All Tabs" Click="TabCtx_CloseAllTabs" />
+                                                        <MenuItem Header="Close Tab" Click="TabCtx_CloseTab">
+                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Dismiss" /></MenuItem.Icon>
+                                                        </MenuItem>
+                                                        <MenuItem Header="Close Other Tabs" Click="TabCtx_CloseOtherTabs">
+                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="TabDesktopMultiple" /></MenuItem.Icon>
+                                                        </MenuItem>
+                                                        <MenuItem Header="Close All Tabs" Click="TabCtx_CloseAllTabs">
+                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="DismissSquareMultiple" /></MenuItem.Icon>
+                                                        </MenuItem>
                                                     </ContextMenu>
                                                 </Border.ContextMenu>
-                                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                                    <!-- Folder color dot (visible when folder has custom color) -->
-                                                    <Ellipse Grid.Column="0" Width="7" Height="7"
-                                                             Fill="{Binding FolderColor, Converter={x:Static vm:FolderColorBrushConverter.Instance}}"
-                                                             Margin="0,0,6,0" VerticalAlignment="Center" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Title}"
-                                                               FontSize="12" FontWeight="Medium"
-                                                               VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource NexusText}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <Button Grid.Column="2" Content="&#xD7;" FontSize="11"
-                                                            Padding="4,2" Margin="8,0,0,0"
-                                                            Background="Transparent" BorderThickness="0"
-                                                            Foreground="{DynamicResource NexusTabCloseButton}"
-                                                            CornerRadius="10"
-                                                            VerticalAlignment="Center" Click="TabClose_Click" />
-                                                </Grid>
+                                                <Panel>
+                                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                                                        <!-- Folder icon: tinted with the folder's custom color when it has one,
+                                                             otherwise accent (active) / gray (inactive) via styles. -->
+                                                        <Panel Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                            <fluent:SymbolIcon Classes="tabIcon" Symbol="Folder" IconVariant="Filled"
+                                                                               IsVisible="{Binding FolderColor, Converter={x:Static vm:IsNullConverter.Instance}}" />
+                                                            <fluent:SymbolIcon Symbol="Folder" IconVariant="Filled" FontSize="15"
+                                                                               Foreground="{Binding FolderColor, Converter={x:Static vm:FolderColorBrushConverter.Instance}}"
+                                                                               IsVisible="{Binding FolderColor, Converter={x:Static vm:HasFolderColorConverter.Instance}}" />
+                                                        </Panel>
+                                                        <TextBlock Grid.Column="1" Classes="tabTitle" Text="{Binding Title}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <Button Grid.Column="2" Classes="tabClose" Content="&#xE8BB;"
+                                                                ToolTip.Tip="Close Tab"
+                                                                AutomationProperties.Name="Close Tab"
+                                                                Click="TabClose_Click" />
+                                                    </Grid>
+                                                    <!-- Accent underline (active tab only) -->
+                                                    <Border Classes="tabIndicator" />
+                                                </Panel>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -362,21 +477,21 @@
 
                         <!-- RIGHT: App icon (subtle branding) -->
                         <!-- RIGHT: Square window buttons (minimize / maximize / close), Windows order -->
-                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="0"
-                                    VerticalAlignment="Stretch">
+                        <StackPanel Grid.Column="3" Orientation="Horizontal"
+                                    VerticalAlignment="Center" Spacing="4" Margin="6,0,12,0">
                             <StackPanel.Styles>
                                 <Style Selector="Button.captionBtn">
-                                    <Setter Property="Width" Value="46" />
-                                    <Setter Property="Height" Value="40" />
+                                    <Setter Property="Width" Value="26" />
+                                    <Setter Property="Height" Value="26" />
                                     <Setter Property="Padding" Value="0" />
-                                    <Setter Property="CornerRadius" Value="0" />
+                                    <Setter Property="CornerRadius" Value="13" />
                                     <Setter Property="Background" Value="Transparent" />
                                     <Setter Property="BorderThickness" Value="0" />
                                     <Setter Property="HorizontalContentAlignment" Value="Center" />
                                     <Setter Property="VerticalContentAlignment" Value="Center" />
-                                    <Setter Property="Foreground" Value="{DynamicResource NexusText}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource NexusTextSecondary}" />
                                     <Setter Property="FontFamily" Value="Segoe Fluent Icons,Segoe MDL2 Assets" />
-                                    <Setter Property="FontSize" Value="10" />
+                                    <Setter Property="FontSize" Value="9" />
                                 </Style>
                                 <Style Selector="Button.captionBtn:pointerover /template/ ContentPresenter">
                                     <Setter Property="Background" Value="{DynamicResource NexusHover}" />
@@ -404,147 +519,44 @@
                 <!-- ====================================================== -->
                 <!-- ROW 1: TOOLBAR (Modern grouped controls + dark address) -->
                 <!-- ====================================================== -->
-                <Border Grid.Row="1" Padding="12,8"
-                        BorderBrush="{DynamicResource NexusToolbarBorder}" BorderThickness="0,0,0,1"
-                        Background="{DynamicResource NexusSurface}">
+                <Border Grid.Row="1" Padding="12,6"
+                        Background="Transparent">
 
                     <DockPanel>
-                        <!-- LEFT: Navigation group (rounded panel) -->
-                        <Border DockPanel.Dock="Left"
-                                Background="{DynamicResource NexusNavGroupBackground}"
-                                BorderBrush="{DynamicResource NexusNavGroupBorder}"
-                                BorderThickness="1" CornerRadius="10"
-                                Padding="4,3" Margin="0,0,10,0"
-                                VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="2">
-                                <!-- Back / Forward -->
-                                <Button Classes="navBtn" BorderThickness="0"
-                                        Command="{Binding GoBackCommand}"
-                                        IsEnabled="{Binding CanGoBack}"
-                                        ToolTip.Tip="Back (Alt+Left)">
-                                    <fluent:SymbolIcon Symbol="ArrowLeft" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                                </Button>
-                                <Button Classes="navBtn" BorderThickness="0"
-                                        Command="{Binding GoForwardCommand}"
-                                        IsEnabled="{Binding CanGoForward}"
-                                        ToolTip.Tip="Forward (Alt+Right)">
-                                    <fluent:SymbolIcon Symbol="ArrowRight" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                                </Button>
-                                <Button Classes="navBtn" BorderThickness="0"
-                                        Command="{Binding GoUpCommand}"
-                                        IsEnabled="{Binding CanGoUp}"
-                                        ToolTip.Tip="Go Up (Alt+Up)">
-                                    <fluent:SymbolIcon Symbol="ArrowUp" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                                </Button>
-                                <Button Classes="navBtn" BorderThickness="0"
-                                        Command="{Binding RefreshCommand}"
-                                        ToolTip.Tip="Refresh (F5)">
-                                    <fluent:SymbolIcon Symbol="ArrowClockwise" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                                </Button>
-                            </StackPanel>
-                        </Border>
+                        <!-- RIGHT CLUSTER (uniform icon buttons): progress · search · view · actions · settings -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2"
+                                    VerticalAlignment="Center" Margin="8,0,0,0">
 
-                        <!-- View mode segmented group -->
-                        <Border DockPanel.Dock="Left"
-                                Background="{DynamicResource NexusNavGroupBackground}"
-                                BorderBrush="{DynamicResource NexusNavGroupBorder}"
-                                BorderThickness="1" CornerRadius="10"
-                                Padding="2,2" Margin="0,0,10,0"
-                                VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="0">
+                            <!-- Files / Project content toggle (Project Explorer is an alternative view) -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
                                 <Button Classes="segBtn segBtnFirst"
-                                        Command="{Binding SetLargeIconsViewCommand}"
-                                        ToolTip.Tip="Icons">
-                                    <fluent:SymbolIcon Symbol="Grid" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
-                                </Button>
-                                <Button Classes="segBtn"
-                                        Command="{Binding SetListViewCommand}"
-                                        ToolTip.Tip="List">
-                                    <fluent:SymbolIcon Symbol="TextBulletList" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
-                                </Button>
-                                <Button Classes="segBtn"
-                                        Command="{Binding SetDetailsViewCommand}"
-                                        ToolTip.Tip="Details">
-                                    <fluent:SymbolIcon Symbol="AppsList" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
+                                        Command="{Binding ShowFilesContentCommand}"
+                                        ToolTip.Tip="Files"
+                                        AutomationProperties.Name="Files view"
+                                        Background="{Binding ContentMode, Converter={x:Static vm:ContentModeActiveBackgroundConverter.Instance}, ConverterParameter=Files}">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <fluent:SymbolIcon Symbol="Folder" FontSize="13" VerticalAlignment="Center" />
+                                        <TextBlock Text="Files" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </Button>
                                 <Button Classes="segBtn segBtnLast"
-                                        Command="{Binding SetMediumIconsViewCommand}"
-                                        ToolTip.Tip="Tiles">
-                                    <fluent:SymbolIcon Symbol="SlideLayout" FontSize="12" Foreground="{DynamicResource NexusSegBtnForeground}" />
+                                        Command="{Binding ShowProjectContentCommand}"
+                                        ToolTip.Tip="Project Explorer"
+                                        AutomationProperties.Name="Project view"
+                                        Background="{Binding ContentMode, Converter={x:Static vm:ContentModeActiveBackgroundConverter.Instance}, ConverterParameter=Project}">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <fluent:SymbolIcon Symbol="Box" FontSize="13" VerticalAlignment="Center" />
+                                        <TextBlock Text="Project" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </Button>
                             </StackPanel>
-                        </Border>
 
-                        <!-- Actions + Layout controls -->
-                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4"
-                                    VerticalAlignment="Center" Margin="0,0,10,0">
-                            <!-- Gear action button -->
-                            <Button Classes="navBtn" ToolTip.Tip="Actions">
-                                <fluent:SymbolIcon Symbol="MoreHorizontal" FontSize="15" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                                <Button.Flyout>
-                                    <MenuFlyout>
-                                        <MenuItem Header="New Folder" Command="{Binding CreateFolderCommand}" />
-                                        <MenuItem Header="New File" Command="{Binding CreateFileCommand}" />
-                                        <Separator />
-                                        <MenuItem Header="Show Item Information" Command="{Binding ToggleShowItemInfoCommand}" />
-                                        <MenuItem Header="Show Hidden Files" Command="{Binding ToggleShowHiddenFilesCommand}" />
-                                        <Separator />
-                                        <MenuItem Header="Sort by Name" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Name}" />
-                                        <MenuItem Header="Sort by Date" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.DateModified}" />
-                                        <MenuItem Header="Sort by Size" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Size}" />
-                                        <MenuItem Header="Sort by Type" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Type}" />
-                                        <MenuItem Header="Sort by Color" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Color}" />
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                            </Button>
-
-                            <!-- General settings (separate from explorer actions) -->
-                            <Button Classes="navBtn" ToolTip.Tip="Settings"
-                                    Command="{Binding OpenSettingsCommand}">
-                                <fluent:SymbolIcon Symbol="Settings" FontSize="15" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                            </Button>
-
-                            <!-- Layout mode toggle -->
-                            <Border BorderBrush="{DynamicResource NexusLayoutModeBorder}" BorderThickness="1" CornerRadius="8"
-                                    Padding="2">
-                                <StackPanel Orientation="Horizontal" Spacing="0">
-                                    <Button Classes="macBtn" Padding="6,4"
-                                            Command="{Binding SetExplorerOnlyCommand}"
-                                            ToolTip.Tip="Explorer Only">
-                                        <fluent:SymbolIcon Symbol="Folder" FontSize="12" Foreground="{DynamicResource NexusMacBtnForeground}" />
-                                    </Button>
-                                    <Button Classes="macBtn" Padding="6,4"
-                                            Command="{Binding SetSplitCommand}"
-                                            ToolTip.Tip="Split View">
-                                        <fluent:SymbolIcon Symbol="PanelRight" FontSize="12" Foreground="{DynamicResource NexusMacBtnForeground}" />
-                                    </Button>
-                                    <Button Classes="macBtn" Padding="6,4"
-                                            Command="{Binding SetTerminalOnlyCommand}"
-                                            ToolTip.Tip="Terminal Only">
-                                        <fluent:SymbolIcon Symbol="WindowConsole" FontSize="12" Foreground="{DynamicResource NexusMacBtnForeground}" />
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Terminal position toggle -->
-                            <Button Classes="navBtn"
-                                    Command="{Binding ToggleSplitOrientationCommand}"
-                                    ToolTip.Tip="Toggle Terminal Position (Right/Bottom)">
-                                <fluent:SymbolIcon Symbol="PanelBottom" FontSize="12" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                            </Button>
-
-                            <!-- Preview toggle -->
-                            <Button Classes="navBtn"
-                                    Command="{Binding TogglePreviewCommand}"
-                                    ToolTip.Tip="Toggle Preview">
-                                <fluent:SymbolIcon Symbol="Eye" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
-                            </Button>
-
-                            <!-- File operation progress (minimized) -->
-                            <Button Classes="navBtn"
+                            <!-- File operation progress (only visible while an operation runs) -->
+                            <Button Classes="toolIcon"
                                     IsVisible="{Binding IsOperationIndicatorVisible}"
                                     Command="{Binding ShowFileOperationCenterCommand}"
-                                    ToolTip.Tip="{Binding OperationSummaryText}">
+                                    ToolTip.Tip="{Binding OperationSummaryText}"
+                                    AutomationProperties.Name="File operations">
                                 <Grid Width="18" Height="18">
                                     <controls:CircularProgressControl Value="{Binding OverallProgress}"
                                                                       TrackBrush="{DynamicResource NexusProgressTrack}"
@@ -557,39 +569,176 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Theme toggle button -->
-                            <Button Classes="navBtn"
-                                    Command="{Binding ToggleThemeCommand}"
-                                    ToolTip.Tip="Toggle Dark/Light Mode">
-                                <fluent:SymbolIcon Symbol="WeatherMoon" FontSize="14" Foreground="{DynamicResource NexusNavBtnForeground}" />
+                            <!-- 1. Search icon + floating input (Popup takes no space in the bar) -->
+                            <Panel>
+                                <Button Classes="toolIcon" Name="SearchToggleButton"
+                                        Click="SearchToggle_Click"
+                                        ToolTip.Tip="Search (Ctrl+F)"
+                                        AutomationProperties.Name="Search">
+                                    <fluent:SymbolIcon Symbol="Search" />
+                                </Button>
+                                <Popup Name="SearchPopup"
+                                       PlacementTarget="{Binding #SearchToggleButton}"
+                                       Placement="BottomEdgeAlignedRight"
+                                       VerticalOffset="6"
+                                       IsLightDismissEnabled="True"
+                                       Closed="SearchPopup_Closed">
+                                    <Border Background="{DynamicResource NexusDialogBackground}"
+                                            BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="1"
+                                            CornerRadius="12" Padding="5"
+                                            BoxShadow="0 8 24 -4 #40000000">
+                                        <TextBox Classes="searchBox" Width="250"
+                                                 MinHeight="28" Height="28"
+                                                 Padding="8,2" FontSize="12"
+                                                 VerticalContentAlignment="Center"
+                                                 Text="{Binding SearchQuery, Mode=TwoWay}"
+                                                 Watermark="Search"
+                                                 Name="SearchBoxTextBox"
+                                                 AutomationProperties.Name="Search files and folders"
+                                                 KeyDown="SearchBox_KeyDown"
+                                                 TextChanged="SearchBox_TextChanged">
+                                            <TextBox.InnerLeftContent>
+                                                <fluent:SymbolIcon Symbol="Search" FontSize="12" Margin="6,0,2,0"
+                                                                   Foreground="{DynamicResource NexusSearchIcon}" />
+                                            </TextBox.InnerLeftContent>
+                                        </TextBox>
+                                    </Border>
+                                </Popup>
+                            </Panel>
+
+                            <!-- 2. View / layout dropdown: shows the active mode's icon; menu is icons only. -->
+                            <Button Classes="toolIcon" ToolTip.Tip="View / Layout"
+                                    AutomationProperties.Name="View and layout">
+                                <fluent:SymbolIcon>
+                                    <fluent:SymbolIcon.Symbol>
+                                        <MultiBinding Converter="{x:Static vm:ActiveViewIconConverter.Instance}">
+                                            <Binding Path="ViewMode" />
+                                            <Binding Path="LayoutMode" />
+                                        </MultiBinding>
+                                    </fluent:SymbolIcon.Symbol>
+                                </fluent:SymbolIcon>
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedRight"
+                                            FlyoutPresenterClasses="compactFlyout">
+                                        <StackPanel Spacing="2">
+                                            <StackPanel.Styles>
+                                                <Style Selector="Button.viewOpt">
+                                                    <Setter Property="Width" Value="36" />
+                                                    <Setter Property="Height" Value="34" />
+                                                    <Setter Property="Padding" Value="0" />
+                                                    <Setter Property="CornerRadius" Value="8" />
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                                                    <Setter Property="Cursor" Value="Hand" />
+                                                </Style>
+                                                <Style Selector="Button.viewOpt fluent|SymbolIcon">
+                                                    <Setter Property="FontSize" Value="16" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource NexusNavBtnForeground}" />
+                                                </Style>
+                                                <Style Selector="Button.viewOpt:pointerover /template/ ContentPresenter">
+                                                    <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+                                                </Style>
+                                            </StackPanel.Styles>
+                                            <Button Classes="viewOpt" Tag="Icons" Click="ViewOption_Click" ToolTip.Tip="Icons" AutomationProperties.Name="Icons">
+                                                <fluent:SymbolIcon Symbol="Grid" />
+                                            </Button>
+                                            <Button Classes="viewOpt" Tag="Details" Click="ViewOption_Click" ToolTip.Tip="Details" AutomationProperties.Name="Details">
+                                                <fluent:SymbolIcon Symbol="AppsList" />
+                                            </Button>
+                                            <Button Classes="viewOpt" Tag="Split" Click="ViewOption_Click" ToolTip.Tip="Split terminal" AutomationProperties.Name="Split terminal">
+                                                <fluent:SymbolIcon Symbol="PanelRight" />
+                                            </Button>
+                                            <Button Classes="viewOpt" Tag="Terminal" Click="ViewOption_Click" ToolTip.Tip="Terminal" AutomationProperties.Name="Terminal">
+                                                <fluent:SymbolIcon Symbol="WindowConsole" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <!-- 3. Actions -->
+                            <Button Classes="toolIcon" ToolTip.Tip="Actions"
+                                    AutomationProperties.Name="Actions">
+                                <fluent:SymbolIcon Symbol="Options" />
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="New Folder" Command="{Binding CreateFolderCommand}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="FolderAdd" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="New File" Command="{Binding CreateFileCommand}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="DocumentAdd" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <!-- New (dynamic: shell-discovered templates + built-ins) -->
+                                        <MenuItem Header="New" ItemsSource="{Binding NewMenuItems}"
+                                                  Tag="{Binding}"
+                                                  IsVisible="{Binding HasNewMenuItems}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Add" /></MenuItem.Icon>
+                                            <MenuItem.Styles>
+                                                <Style Selector="MenuItem > MenuItem">
+                                                    <Setter Property="Header" Value="{Binding DisplayName}" />
+                                                    <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.CreateFromNewItemCommand}" />
+                                                    <Setter Property="CommandParameter" Value="{Binding}" />
+                                                    <Setter Property="Icon">
+                                                        <Template>
+                                                            <Panel>
+                                                                <fluent:SymbolIcon Symbol="{Binding FallbackSymbol}" FontSize="14"
+                                                                                   IsVisible="{Binding Icon, Converter={x:Static vm:IsNullConverter.Instance}}" />
+                                                                <Image Source="{Binding Icon}" Width="16" Height="16"
+                                                                       IsVisible="{Binding Icon, Converter={x:Static vm:IsNotNullConverter.Instance}}" />
+                                                            </Panel>
+                                                        </Template>
+                                                    </Setter>
+                                                </Style>
+                                            </MenuItem.Styles>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="Show Item Information" Command="{Binding ToggleShowItemInfoCommand}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Info" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Show Hidden Files" Command="{Binding ToggleShowHiddenFilesCommand}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Eye" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Show/Hide Preview" Command="{Binding TogglePreviewCommand}" InputGesture="Ctrl+P">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="PanelRight" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="Sort by Name" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Name}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="TextSortAscending" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Sort by Date" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.DateModified}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Calendar" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Sort by Size" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Size}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Ruler" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Sort by Type" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Type}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Tag" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Sort by Color" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Color}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Color" /></MenuItem.Icon>
+                                        </MenuItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <!-- 4. Settings -->
+                            <Button Classes="toolIcon" ToolTip.Tip="Settings"
+                                    AutomationProperties.Name="Settings"
+                                    Command="{Binding OpenSettingsCommand}">
+                                <fluent:SymbolIcon Symbol="Settings" />
                             </Button>
                         </StackPanel>
 
-                        <!-- RIGHT: Search box -->
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
-                                    VerticalAlignment="Center" Margin="10,0,0,0">
-                            <TextBox Classes="searchBox" Width="220"
-                                     Text="{Binding SearchQuery, Mode=TwoWay}"
-                                     Watermark="Search"
-                                     Name="SearchBoxTextBox"
-                                     AutomationProperties.Name="Search files and folders"
-                                     KeyDown="SearchBox_KeyDown"
-                                     TextChanged="SearchBox_TextChanged">
-                                <TextBox.InnerLeftContent>
-                                    <fluent:SymbolIcon Symbol="Search" FontSize="12" Margin="6,0,4,0"
-                                                       Foreground="{DynamicResource NexusSearchIcon}" />
-                                </TextBox.InnerLeftContent>
-                            </TextBox>
-                        </StackPanel>
-
-                        <!-- CENTER: Address bar (breadcrumb hierarchy) -->
+                        <!-- LEFT (fills remaining space): Directory bar with Back/Forward + breadcrumbs -->
                         <Border Classes.edit="{Binding IsAddressBarEditing}"
                                 Background="{DynamicResource NexusAddressBarBackground}"
-                                CornerRadius="10"
+                                CornerRadius="16"
                                 BorderBrush="{DynamicResource NexusAddressBarBorder}"
                                 BorderThickness="1"
                                 Padding="0" Margin="0"
-                                MinHeight="32"
+                                MinHeight="34"
                                 VerticalAlignment="Center"
                                 DoubleTapped="AddressBar_DoubleTapped">
                             <Border.Styles>
@@ -599,27 +748,41 @@
                             </Border.Styles>
                             <Border.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Copy address" Command="{Binding CopyCurrentPathCommand}" />
+                                    <MenuItem Header="Copy address" Command="{Binding CopyCurrentPathCommand}">
+                                        <MenuItem.Icon><fluent:SymbolIcon Symbol="Copy" /></MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator />
-                                    <MenuItem Header="Edit address" Command="{Binding StartAddressBarEditCommand}" />
+                                    <MenuItem Header="Edit address" Command="{Binding StartAddressBarEditCommand}">
+                                        <MenuItem.Icon><fluent:SymbolIcon Symbol="Edit" /></MenuItem.Icon>
+                                    </MenuItem>
                                 </ContextMenu>
                             </Border.ContextMenu>
-                            <Panel VerticalAlignment="Center">
+                            <Grid ColumnDefinitions="Auto,Auto,*" VerticalAlignment="Center">
+                                <!-- Back / Forward inside the directory bar -->
+                                <Button Grid.Column="0" Classes="navBtn" Margin="4,0,0,0"
+                                        Padding="6,5" MinWidth="28" MinHeight="26"
+                                        Command="{Binding GoBackCommand}"
+                                        IsEnabled="{Binding CanGoBack}"
+                                        ToolTip.Tip="Back (Alt+Left)">
+                                    <fluent:SymbolIcon Symbol="ArrowLeft" FontSize="13" Foreground="{DynamicResource NexusBreadcrumbIcon}" />
+                                </Button>
+                                <Button Grid.Column="1" Classes="navBtn" Margin="0,0,4,0"
+                                        Padding="6,5" MinWidth="28" MinHeight="26"
+                                        Command="{Binding GoForwardCommand}"
+                                        IsEnabled="{Binding CanGoForward}"
+                                        ToolTip.Tip="Forward (Alt+Right)">
+                                    <fluent:SymbolIcon Symbol="ArrowRight" FontSize="13" Foreground="{DynamicResource NexusBreadcrumbIcon}" />
+                                </Button>
+
+                                <Panel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Stretch">
                                 <!-- Breadcrumb path (visible when not editing) -->
                                 <ScrollViewer IsVisible="{Binding !IsAddressBarEditing}"
                                               HorizontalScrollBarVisibility="Hidden"
                                               VerticalScrollBarVisibility="Disabled"
+                                              HorizontalAlignment="Left"
                                               Name="BreadcrumbScrollViewer">
                                     <StackPanel Orientation="Horizontal"
-                                                Margin="6,0">
-                                        <!-- Root icon -->
-                                        <Button Background="Transparent" BorderThickness="0"
-                                                Padding="4,4" Cursor="Hand" VerticalAlignment="Center"
-                                                Command="{Binding GoUpCommand}"
-                                                IsEnabled="{Binding CanGoUp}">
-                                            <fluent:SymbolIcon Symbol="FolderOpen" FontSize="14"
-                                                               Foreground="{DynamicResource NexusBreadcrumbIcon}" />
-                                        </Button>
+                                                Margin="2,0">
                                         <!-- Breadcrumb segments (dimmed path, bold current dir) -->
                                         <ItemsControl ItemsSource="{Binding Breadcrumbs}">
                                             <ItemsControl.ItemsPanel>
@@ -630,11 +793,12 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:BreadcrumbItem">
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <!-- Chevron separator -->
+                                                        <!-- Chevron separator (hidden before the first segment) -->
                                                         <TextBlock Text="&#x203A;" VerticalAlignment="Center"
                                                                    FontSize="14"
                                                                    Foreground="{DynamicResource NexusBreadcrumbSeparator}"
-                                                                   Margin="3,0" />
+                                                                   Margin="3,0"
+                                                                   IsVisible="{Binding !IsFirst}" />
                                                         <!-- Clickable segment: last item is bold+highlighted, others dimmed -->
                                                         <Button Command="{Binding DataContext.BreadcrumbNavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                 CommandParameter="{Binding}"
@@ -672,7 +836,8 @@
                                          Padding="10,6"
                                          VerticalContentAlignment="Center"
                                          KeyDown="AddressBar_KeyDown" LostFocus="AddressBar_LostFocus" />
-                            </Panel>
+                                </Panel>
+                            </Grid>
                         </Border>
                     </DockPanel>
                 </Border>
@@ -680,18 +845,15 @@
                 <!-- ====================================================== -->
                 <!-- ROW 2: BODY (Sidebar + Content + Terminal)              -->
                 <!-- ====================================================== -->
-                <Grid Grid.Row="2" ColumnDefinitions="185,Auto,*">
+                <Grid Grid.Row="2" ColumnDefinitions="195,Auto,*" Margin="10,2,10,8">
 
-                    <!-- ====== SIDEBAR (frosted depth, accent selection) ====== -->
-                    <Border Grid.Column="0" BorderBrush="{DynamicResource NexusSidebarBorder}" BorderThickness="0,0,1,0"
+                    <!-- ====== SIDEBAR (floating rounded glass card) ====== -->
+                    <Border Grid.Column="0"
                             Name="SidebarBorder"
+                            Background="{DynamicResource NexusGlassSurface}"
+                            BorderBrush="{DynamicResource NexusGlassBorder}" BorderThickness="1"
+                            CornerRadius="16" ClipToBounds="True"
                             AutomationProperties.Name="Navigation sidebar">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                <GradientStop Color="{DynamicResource NexusSidebarGradientStart}" Offset="0" />
-                                <GradientStop Color="{DynamicResource NexusSidebarGradientEnd}" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
                         <Grid RowDefinitions="*,Auto">
                             <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <ItemsControl ItemsSource="{Binding SidebarGroups}" Margin="0,8,0,4">
@@ -706,19 +868,27 @@
                                                             <MenuItem Header="Rename Group"
                                                                       Command="{Binding $parent[Window].DataContext.RenameGroupCommand}"
                                                                       CommandParameter="{Binding}"
-                                                                      IsVisible="{Binding !IsSystem}" />
+                                                                      IsVisible="{Binding !IsSystem}">
+                                                                <MenuItem.Icon><fluent:SymbolIcon Symbol="Rename" /></MenuItem.Icon>
+                                                            </MenuItem>
                                                             <MenuItem Header="Delete Group"
                                                                       Command="{Binding $parent[Window].DataContext.DeleteGroupCommand}"
                                                                       CommandParameter="{Binding}"
-                                                                      IsVisible="{Binding !IsSystem}" />
+                                                                      IsVisible="{Binding !IsSystem}">
+                                                                <MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon>
+                                                            </MenuItem>
                                                             <MenuItem Header="Move Up"
                                                                       Command="{Binding $parent[Window].DataContext.MoveGroupUpCommand}"
                                                                       CommandParameter="{Binding}"
-                                                                      IsVisible="{Binding !IsSystem}" />
+                                                                      IsVisible="{Binding !IsSystem}">
+                                                                <MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowUp" /></MenuItem.Icon>
+                                                            </MenuItem>
                                                             <MenuItem Header="Move Down"
                                                                       Command="{Binding $parent[Window].DataContext.MoveGroupDownCommand}"
                                                                       CommandParameter="{Binding}"
-                                                                      IsVisible="{Binding !IsSystem}" />
+                                                                      IsVisible="{Binding !IsSystem}">
+                                                                <MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowDown" /></MenuItem.Icon>
+                                                            </MenuItem>
                                                         </ContextMenu>
                                                     </Button.ContextMenu>
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -739,17 +909,28 @@
                                                                     PointerPressed="SidebarItem_PointerPressed">
                                                                 <Border.ContextMenu>
                                                                     <ContextMenu x:CompileBindings="False">
+                                                                        <MenuItem Header="Empty Recycle Bin"
+                                                                                  Command="{Binding $parent[Window].DataContext.EmptyRecycleBinCommand}"
+                                                                                  IsVisible="{Binding Path, Converter={x:Static vm:IsRecycleBinPathConverter.Instance}}">
+                                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon>
+                                                                        </MenuItem>
                                                                         <MenuItem Header="Unpin from Quick Access"
                                                                                   Command="{Binding $parent[Window].DataContext.UnpinFromFavoritesCommand}"
                                                                                   CommandParameter="{Binding Path}"
-                                                                                  IsVisible="{Binding Kind, Converter={x:Static vm:IsFavoriteKindConverter.Instance}}" />
+                                                                                  IsVisible="{Binding Kind, Converter={x:Static vm:IsFavoriteKindConverter.Instance}}">
+                                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="PinOff" /></MenuItem.Icon>
+                                                                        </MenuItem>
                                                                         <MenuItem Header="Remove from Group"
                                                                                   Command="{Binding $parent[Window].DataContext.RemoveFromGroupCommand}"
                                                                                   CommandParameter="{Binding}"
-                                                                                  IsVisible="{Binding Kind, Converter={x:Static vm:IsCustomItemConverter.Instance}}" />
+                                                                                  IsVisible="{Binding Kind, Converter={x:Static vm:IsCustomItemConverter.Instance}}">
+                                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Dismiss" /></MenuItem.Icon>
+                                                                        </MenuItem>
                                                                         <MenuItem Header="Open in New Tab"
                                                                                   Command="{Binding $parent[Window].DataContext.NewTabAtPathCommand}"
-                                                                                  CommandParameter="{Binding Path}" />
+                                                                                  CommandParameter="{Binding Path}">
+                                                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="TabAdd" /></MenuItem.Icon>
+                                                                        </MenuItem>
                                                                     </ContextMenu>
                                                                 </Border.ContextMenu>
                                                                 <StackPanel Orientation="Horizontal" Spacing="10">
@@ -758,8 +939,8 @@
                                                                              IsVisible="{Binding ColorHex, Converter={x:Static vm:HasFolderColorConverter.Instance}}"
                                                                              Fill="{Binding ColorHex, Converter={x:Static vm:FolderColorBrushConverter.Instance}}" />
                                                                     <fluent:SymbolIcon Symbol="{Binding Name, Converter={x:Static vm:NavigationNameToIconConverter.Instance}}"
-                                                                                       Foreground="{Binding Name, Converter={x:Static vm:NavigationNameToColorConverter.Instance}}"
-                                                                                       FontSize="16" VerticalAlignment="Center" IconVariant="Filled"
+                                                                                       Foreground="{DynamicResource NexusSidebarItemForeground}"
+                                                                                       FontSize="16" VerticalAlignment="Center" IconVariant="Regular"
                                                                                        IsVisible="{Binding ColorHex, Converter={x:Static vm:IsNullConverter.Instance}}" />
                                                                     <TextBlock Text="{Binding Name}" FontSize="13"
                                                                                VerticalAlignment="Center"
@@ -787,8 +968,8 @@
                         </Grid>
                     </Border>
 
-                    <!-- Sidebar splitter (resizable) -->
-                    <GridSplitter Grid.Column="1" Width="5" Background="Transparent"
+                    <!-- Sidebar splitter (resizable, gap between floating cards) -->
+                    <GridSplitter Grid.Column="1" Width="10" Background="Transparent"
                                   ResizeDirection="Columns" />
 
                     <!-- ====== CONTENT GRID (Explorer | Splitter | Terminal) ====== -->
@@ -797,23 +978,39 @@
                           RowDefinitions="*,0,0">
 
                         <!-- === EXPLORER GRID (FileView | PreviewSplitter | Preview) === -->
-                        <Grid Grid.Column="0" Name="ExplorerGrid"
-                              ColumnDefinitions="*,0,0">
+                        <!-- The preview column has a MinWidth so the splitter can't shrink it
+                             small enough for the preview cards to overflow/clip. -->
+                        <Grid Grid.Column="0" Name="ExplorerGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="320" />
+                                <ColumnDefinition Width="0" />
+                                <!-- MinWidth is toggled in code-behind (UpdatePreviewLayout):
+                                     240 when the preview is shown, 0 when hidden. -->
+                                <ColumnDefinition Width="0" />
+                            </Grid.ColumnDefinitions>
 
-                            <!-- File content area -->
-                            <Border Grid.Column="0" Background="{DynamicResource NexusFileViewBackground}" Padding="0"
+                            <!-- File content area (floating rounded glass card) -->
+                            <Border Grid.Column="0" Background="{DynamicResource NexusGlassSurface}" Padding="0"
+                                    BorderBrush="{DynamicResource NexusGlassBorder}" BorderThickness="1"
+                                    CornerRadius="16" ClipToBounds="True"
                                     behaviors:DragDropBehavior.IsEnabled="True">
                                 <Border.ContextMenu>
                                     <ContextMenu>
+                                        <MenuItem Header="Empty Recycle Bin" Command="{Binding EmptyRecycleBinCommand}"
+                                                  IsVisible="{Binding IsRecycleBinView}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Delete" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator IsVisible="{Binding IsRecycleBinView}" />
                                         <MenuItem Header="View">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Grid" /></MenuItem.Icon>
                                             <MenuItem Header="Extra Large Icons" Command="{Binding SetExtraLargeIconsViewCommand}" />
                                             <MenuItem Header="Large Icons" Command="{Binding SetLargeIconsViewCommand}" />
                                             <MenuItem Header="Medium Icons" Command="{Binding SetMediumIconsViewCommand}" />
                                             <MenuItem Header="Small Icons" Command="{Binding SetSmallIconsViewCommand}" />
-                                            <MenuItem Header="List" Command="{Binding SetListViewCommand}" />
                                             <MenuItem Header="Details" Command="{Binding SetDetailsViewCommand}" />
                                         </MenuItem>
                                         <MenuItem Header="Sort by">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowSort" /></MenuItem.Icon>
                                             <MenuItem Header="Name" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Name}" />
                                             <MenuItem Header="Date modified" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.DateModified}" />
                                             <MenuItem Header="Type" Command="{Binding SetSortModeCommand}" CommandParameter="{x:Static models:FileSortMode.Type}" />
@@ -824,6 +1021,7 @@
                                             <MenuItem Header="Descending" Command="{Binding SetSortDirectionCommand}" CommandParameter="{x:Static models:SortDirection.Descending}" />
                                         </MenuItem>
                                         <MenuItem Header="Group by">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="GroupList" /></MenuItem.Icon>
                                             <MenuItem Header="None" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.None}" />
                                             <MenuItem Header="Name" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.Name}" />
                                             <MenuItem Header="Date modified" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.DateModified}" />
@@ -832,15 +1030,26 @@
                                             <MenuItem Header="Color" Command="{Binding SetGroupModeCommand}" CommandParameter="{x:Static models:FileGroupMode.Color}" />
                                         </MenuItem>
                                         <Separator />
-                                        <MenuItem Header="Show hidden files" Command="{Binding ToggleShowHiddenFilesCommand}" />
+                                        <MenuItem Header="Show hidden files" Command="{Binding ToggleShowHiddenFilesCommand}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Eye" /></MenuItem.Icon>
+                                        </MenuItem>
                                         <Separator />
-                                        <MenuItem Header="Refresh" Command="{Binding RefreshCommand}" />
+                                        <MenuItem Header="Refresh" Command="{Binding RefreshCommand}" InputGesture="F5">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowClockwise" /></MenuItem.Icon>
+                                        </MenuItem>
                                         <Separator />
-                                        <MenuItem Header="Paste" Command="{Binding PasteCommand}" IsEnabled="{Binding HasClipboardContent}" />
-                                        <MenuItem Header="{Binding UndoDescription, TargetNullValue='Undo'}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
+                                        <MenuItem Header="Paste" Command="{Binding PasteCommand}" IsEnabled="{Binding HasClipboardContent}" InputGesture="Ctrl+V">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="ClipboardPaste" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="{Binding UndoDescription, TargetNullValue='Undo'}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" InputGesture="Ctrl+Z">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="ArrowUndo" /></MenuItem.Icon>
+                                        </MenuItem>
                                         <Separator />
-                                        <MenuItem Header="Open in Terminal" Command="{Binding OpenCurrentInTerminalCommand}" />
+                                        <MenuItem Header="Open in Terminal" Command="{Binding OpenCurrentInTerminalCommand}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="WindowConsole" /></MenuItem.Icon>
+                                        </MenuItem>
                                         <MenuItem Header="Open in Other Terminal" ItemsSource="{Binding AvailableTerminalProfiles}" Tag="{Binding}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Code" /></MenuItem.Icon>
                                             <MenuItem.Styles>
                                                 <Style Selector="MenuItem > MenuItem">
                                                     <Setter Property="Header" Value="{Binding Name}" />
@@ -854,11 +1063,34 @@
                                                 </Style>
                                             </MenuItem.Styles>
                                         </MenuItem>
-                                        <MenuItem Header="Pin to Quick Access" Command="{Binding PinCurrentFolderCommand}" />
+                                        <MenuItem Header="Pin to Quick Access" Command="{Binding PinCurrentFolderCommand}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Pin" /></MenuItem.Icon>
+                                        </MenuItem>
                                         <Separator />
-                                        <MenuItem Header="New">
-                                            <MenuItem Header="Folder" Command="{Binding CreateFolderCommand}" />
-                                            <MenuItem Header="Text Document" Command="{Binding CreateFileCommand}" />
+                                        <!-- New: Folder + Text Document are always present (built-ins in
+                                             NewMenuItems); shell-discovered types are appended dynamically.
+                                             Falls back to the two static items if discovery is unavailable. -->
+                                        <MenuItem Header="New" ItemsSource="{Binding NewMenuItems}"
+                                                  Tag="{Binding}"
+                                                  IsVisible="{Binding HasNewMenuItems}">
+                                            <MenuItem.Icon><fluent:SymbolIcon Symbol="Add" /></MenuItem.Icon>
+                                            <MenuItem.Styles>
+                                                <Style Selector="MenuItem > MenuItem">
+                                                    <Setter Property="Header" Value="{Binding DisplayName}" />
+                                                    <Setter Property="Command" Value="{Binding $parent[MenuItem].Tag.CreateFromNewItemCommand}" />
+                                                    <Setter Property="CommandParameter" Value="{Binding}" />
+                                                    <Setter Property="Icon">
+                                                        <Template>
+                                                            <Panel>
+                                                                <fluent:SymbolIcon Symbol="{Binding FallbackSymbol}" FontSize="14"
+                                                                                   IsVisible="{Binding Icon, Converter={x:Static vm:IsNullConverter.Instance}}" />
+                                                                <Image Source="{Binding Icon}" Width="16" Height="16"
+                                                                       IsVisible="{Binding Icon, Converter={x:Static vm:IsNotNullConverter.Instance}}" />
+                                                            </Panel>
+                                                        </Template>
+                                                    </Setter>
+                                                </Style>
+                                            </MenuItem.Styles>
                                         </MenuItem>
                                     </ContextMenu>
                                 </Border.ContextMenu>
@@ -880,7 +1112,12 @@
                                     </StackPanel>
 
                                     <!-- FileView (handles all view modes internally) -->
-                                    <views:FileView DataContext="{Binding}" />
+                                    <views:FileView DataContext="{Binding}"
+                                                    IsVisible="{Binding ContentMode, Converter={x:Static vm:IsFilesContentModeConverter.Instance}}" />
+
+                                    <!-- Project Explorer: logical view, alternative to the file listing. -->
+                                    <views:ProjectExplorerView DataContext="{Binding ProjectExplorer}"
+                                                               IsVisible="{Binding $parent[Window].DataContext.ContentMode, Converter={x:Static vm:IsProjectContentModeConverter.Instance}, FallbackValue=False}" />
 
                                     <!-- Rubber-band selection rectangle -->
                                     <Border Name="RubberBand" IsVisible="False"
@@ -892,101 +1129,162 @@
                             </Border>
 
                             <!-- Preview splitter -->
-                            <GridSplitter Grid.Column="1" Width="5" Background="Transparent"
+                            <GridSplitter Grid.Column="1" Width="10" Background="Transparent"
                                           ResizeDirection="Columns"
                                           Name="PreviewSplitter" />
 
-                            <!-- === PREVIEW PANEL === -->
-                            <Border Grid.Column="2" Background="{DynamicResource NexusPreviewBackground}"
-                                    BorderBrush="{DynamicResource NexusPreviewBorder}" BorderThickness="1,0,0,0"
+                            <!-- === PREVIEW PANEL (floating rounded glass card) === -->
+                            <Border Grid.Column="2" Background="{DynamicResource NexusGlassSurface}"
+                                    BorderBrush="{DynamicResource NexusGlassBorder}" BorderThickness="1"
+                                    CornerRadius="16" ClipToBounds="True"
                                     Name="PreviewPanel" IsVisible="{Binding IsPreviewVisible}">
-                                <DockPanel>
-                                    <!-- Preview header -->
-                                    <Border DockPanel.Dock="Top" Padding="12,8"
-                                            BorderBrush="{DynamicResource NexusBorderLight}" BorderThickness="0,0,0,1">
-                                        <TextBlock Text="Preview" FontSize="12" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource NexusTextSecondary}" />
+                                <Grid RowDefinitions="Auto,*">
+                                    <!-- Preview header (always pinned top) -->
+                                    <Border Grid.Row="0" Padding="16,14,16,10"
+                                            Background="Transparent">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <fluent:SymbolIcon Symbol="Eye" FontSize="14"
+                                                               Foreground="{DynamicResource NexusTextSecondary}" />
+                                            <TextBlock Text="Preview" FontSize="12" FontWeight="SemiBold"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource NexusTextSecondary}" />
+                                        </StackPanel>
                                     </Border>
 
-                                    <!-- Preview content -->
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
-                                        <StackPanel Spacing="12">
-                                            <!-- No selection / nothing to preview -->
-                                            <TextBlock IsVisible="{Binding PreviewType, Converter={x:Static vm:IsNoPreviewConverter.Instance}}"
-                                                       Text="Select a file to preview"
-                                                       FontSize="13"
-                                                       Foreground="{DynamicResource NexusPreviewPlaceholder}"
-                                                       HorizontalAlignment="Center" Margin="0,40" />
+                                    <!-- Empty state (nothing selected) — pinned near the top -->
+                                    <StackPanel Grid.Row="1"
+                                                IsVisible="{Binding PreviewType, Converter={x:Static vm:IsNoPreviewConverter.Instance}}"
+                                                Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                Margin="0,56,0,0">
+                                        <fluent:SymbolIcon Symbol="DocumentSearch" FontSize="40"
+                                                           HorizontalAlignment="Center"
+                                                           Foreground="{DynamicResource NexusPreviewPlaceholder}" />
+                                        <TextBlock Text="Select a file to preview"
+                                                   FontSize="13" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource NexusPreviewPlaceholder}" />
+                                    </StackPanel>
 
-                                            <!-- Image preview -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsImagePreviewConverter.Instance}}" Spacing="12">
-                                                <Border Background="{DynamicResource NexusPreviewImageBackground}" CornerRadius="4" Padding="8"
-                                                        HorizontalAlignment="Center">
-                                                    <Image Source="{Binding PreviewImagePath, Converter={x:Static vm:PathToBitmapConverter.Instance}}"
-                                                           MaxHeight="320" Stretch="Uniform" StretchDirection="DownOnly" />
-                                                </Border>
-                                                <StackPanel Spacing="4" Margin="0,4,0,0">
-                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                    <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                    <TextBlock Text="{Binding PreviewLastModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                </StackPanel>
-                                            </StackPanel>
+                                    <!-- Preview content.  HorizontalScrollBarVisibility=Disabled
+                                         is important: it forces the content to the viewport width
+                                         so metadata rows / cards wrap instead of overflowing the card. -->
+                                    <!-- NOTE: the inset is a Margin on the StackPanel, NOT ScrollViewer.Padding.
+                                         ScrollContentPresenter ignores Padding while measuring, so wrapping
+                                         text was measured ~28px too wide and overflowed the card. -->
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  IsVisible="{Binding PreviewType, Converter={x:Static vm:HasSelectionPreviewConverter.Instance}}">
+                                        <StackPanel Spacing="14" VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                                                    Margin="14,4,14,14">
 
-                                            <!-- Text preview -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsTextPreviewConverter.Instance}}" Spacing="10">
-                                                <StackPanel Spacing="4">
-                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                    <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                </StackPanel>
-                                                <Border Background="{DynamicResource NexusPreviewTextBackground}" CornerRadius="4"
-                                                        BorderBrush="{DynamicResource NexusPreviewTextBorder}" BorderThickness="1" Padding="8" MaxHeight="400">
-                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                                        <TextBlock Text="{Binding PreviewTextContent}" FontFamily="Cascadia Mono,Consolas,monospace" FontSize="11"
-                                                                   Foreground="{DynamicResource NexusPreviewTextForeground}" TextWrapping="NoWrap" />
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </StackPanel>
+                                            <!-- ===== HERO: image thumbnail OR big file/folder icon ===== -->
+                                            <!-- Image hero -->
+                                            <Border IsVisible="{Binding PreviewType, Converter={x:Static vm:IsImagePreviewConverter.Instance}}"
+                                                    Background="{DynamicResource NexusPreviewImageBackground}"
+                                                    CornerRadius="10" Padding="10" MinHeight="140">
+                                                <Image Source="{Binding PreviewImagePath, Converter={x:Static vm:PathToBitmapConverter.Instance}}"
+                                                       MaxHeight="300" Stretch="Uniform" StretchDirection="DownOnly"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
 
-                                            <!-- Folder preview: lists the folder's contents -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsFolderPreviewConverter.Instance}}" Spacing="10">
-                                                <StackPanel Spacing="4">
-                                                    <TextBlock Text="{Binding PreviewFileName}" FontSize="13" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource NexusPreviewFileName}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                               Foreground="{DynamicResource NexusPreviewMetadata}" />
-                                                </StackPanel>
-                                                <Border Background="{DynamicResource NexusPreviewTextBackground}" CornerRadius="4"
-                                                        BorderBrush="{DynamicResource NexusPreviewTextBorder}" BorderThickness="1" Padding="8" MaxHeight="400">
-                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                                        <TextBlock Text="{Binding PreviewTextContent}" FontSize="12"
-                                                                   Foreground="{DynamicResource NexusPreviewTextForeground}" TextWrapping="NoWrap" />
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </StackPanel>
+                                            <!-- Icon hero (text / folder / unsupported — shown when there's no image).
+                                                 FlatStyle=True uses the modern flat Fluent folder glyph to match the UI. -->
+                                            <Border IsVisible="{Binding PreviewType, Converter={x:Static vm:IsIconPreviewConverter.Instance}}"
+                                                    Background="{DynamicResource NexusPreviewImageBackground}"
+                                                    CornerRadius="10" Padding="10" Height="128">
+                                                <controls:FileIconControl Item="{Binding SelectedItem}" IconSize="64"
+                                                                          UseThumbnails="True" FlatStyle="True"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center" />
+                                            </Border>
 
-                                            <!-- Unsupported -->
-                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:IsUnsupportedPreviewConverter.Instance}}" Spacing="8" HorizontalAlignment="Center" Margin="0,40">
-                                                <TextBlock Text="Preview not available" FontSize="13"
-                                                           Foreground="{DynamicResource NexusPreviewPlaceholder}" HorizontalAlignment="Center" />
-                                                <TextBlock Text="{Binding PreviewFileName}" FontSize="11"
-                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            <!-- ===== Title block (name + type) ===== -->
+                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:HasSelectionPreviewConverter.Instance}}"
+                                                        Spacing="3">
+                                                <TextBlock Text="{Binding PreviewFileName}" FontSize="14" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource NexusPreviewFileName}"
+                                                           TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding PreviewFileType}" FontSize="11"
-                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" />
-                                                <TextBlock Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}" FontSize="11"
-                                                           Foreground="{DynamicResource NexusPreviewMetadata}" HorizontalAlignment="Center" />
+                                                           Foreground="{DynamicResource NexusTextSecondary}" />
                                             </StackPanel>
+
+                                            <!-- ===== Details card: rich metadata rows ===== -->
+                                            <Border Background="{DynamicResource NexusPreviewBackground}"
+                                                    BorderBrush="{DynamicResource NexusPreviewBorder}" BorderThickness="1"
+                                                    CornerRadius="8" Padding="12,8"
+                                                    HorizontalAlignment="Stretch"
+                                                    IsVisible="{Binding PreviewType, Converter={x:Static vm:HasSelectionPreviewConverter.Instance}}">
+                                                <StackPanel Spacing="0">
+                                                    <!-- Type-specific rows (dimensions, lines, counts…) -->
+                                                    <ItemsControl ItemsSource="{Binding PreviewMetadata}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="models:PreviewMetadataEntry">
+                                                                <Grid ColumnDefinitions="90,*" Margin="0,4">
+                                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="11"
+                                                                               Foreground="{DynamicResource NexusTextTertiary}" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="11"
+                                                                               Foreground="{DynamicResource NexusPreviewMetadata}"
+                                                                               TextWrapping="Wrap" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <!-- Common rows: size / modified / created -->
+                                                    <Grid ColumnDefinitions="90,*" Margin="0,4"
+                                                          IsVisible="{Binding PreviewFileSize, Converter={x:Static vm:IsNotNullConverter.Instance}}">
+                                                        <TextBlock Grid.Column="0" Text="Size" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusTextTertiary}" />
+                                                        <TextBlock Grid.Column="1" FontSize="11"
+                                                                   Text="{Binding PreviewFileSize, Converter={x:Static vm:FileSizeConverter.Instance}}"
+                                                                   Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="90,*" Margin="0,4"
+                                                          IsVisible="{Binding PreviewLastModified, Converter={x:Static vm:IsNotNullConverter.Instance}}">
+                                                        <TextBlock Grid.Column="0" Text="Modified" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusTextTertiary}" />
+                                                        <TextBlock Grid.Column="1" FontSize="11"
+                                                                   Text="{Binding PreviewLastModified, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                                   Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="90,*" Margin="0,4"
+                                                          IsVisible="{Binding PreviewCreated, Converter={x:Static vm:IsNotNullConverter.Instance}}">
+                                                        <TextBlock Grid.Column="0" Text="Created" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusTextTertiary}" />
+                                                        <TextBlock Grid.Column="1" FontSize="11"
+                                                                   Text="{Binding PreviewCreated, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                                                   Foreground="{DynamicResource NexusPreviewMetadata}" />
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- ===== Body: text content or folder listing ===== -->
+                                            <StackPanel IsVisible="{Binding PreviewType, Converter={x:Static vm:HasPreviewBodyConverter.Instance}}"
+                                                        Spacing="6">
+                                                <TextBlock Text="Contents" FontSize="11" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource NexusTextTertiary}" />
+                                                <Border Background="{DynamicResource NexusPreviewTextBackground}" CornerRadius="8"
+                                                        BorderBrush="{DynamicResource NexusPreviewTextBorder}" BorderThickness="1"
+                                                        Padding="10" MaxHeight="380" ClipToBounds="True">
+                                                    <!-- Vertical scroll only; wrapping keeps long lines inside the
+                                                         card instead of overflowing to the right. -->
+                                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                                  VerticalScrollBarVisibility="Auto">
+                                                        <TextBlock Text="{Binding PreviewTextContent}"
+                                                                   FontFamily="Cascadia Mono,Consolas,monospace" FontSize="11"
+                                                                   Foreground="{DynamicResource NexusPreviewTextForeground}"
+                                                                   TextWrapping="Wrap" />
+                                                    </ScrollViewer>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <!-- Unsupported note -->
+                                            <TextBlock IsVisible="{Binding PreviewType, Converter={x:Static vm:IsUnsupportedPreviewConverter.Instance}}"
+                                                       Text="No inline preview available for this file type."
+                                                       FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource NexusPreviewPlaceholder}" />
                                         </StackPanel>
                                     </ScrollViewer>
-                                </DockPanel>
+                                </Grid>
                             </Border>
                         </Grid>
 
@@ -1004,18 +1302,30 @@
                 <!-- ====================================================== -->
                 <!-- ROW 3: STATUS BAR (simplified, no duplicates)            -->
                 <!-- ====================================================== -->
-                <Border Grid.Row="3" Padding="12,4" 
-                        BorderBrush="{DynamicResource NexusStatusBarBorder}" BorderThickness="0,1,0,0"
-                        Background="{DynamicResource NexusBackground}">
-                    <Grid ColumnDefinitions="*,Auto">
+                <Border Grid.Row="3" Padding="18,5,18,8"
+                        Background="Transparent">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
                         <!-- Left: Status text (single source of truth) -->
                         <TextBlock Grid.Column="0"
                                    Text="{Binding StatusText}"
                                    VerticalAlignment="Center"
                                    FontSize="11" Foreground="{DynamicResource NexusStatusBarText}" />
 
+                        <!-- Empty Recycle Bin: always available while viewing the bin -->
+                        <Button Grid.Column="1" Classes="navBtn" Margin="0,0,10,0"
+                                Padding="10,4" FontSize="11.5"
+                                Command="{Binding EmptyRecycleBinCommand}"
+                                IsVisible="{Binding IsRecycleBinView}"
+                                ToolTip.Tip="Permanently empty the Recycle Bin">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <fluent:SymbolIcon Symbol="Delete" FontSize="13"
+                                                   Foreground="{DynamicResource NexusNavBtnForeground}" />
+                                <TextBlock Text="Empty Recycle Bin" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
                         <!-- Right: Zoom slider (only visible in icon views) -->
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
                                     VerticalAlignment="Center"
                                     IsVisible="{Binding ViewMode, Converter={x:Static vm:IsIconViewModeConverter.Instance}}">
                             <fluent:SymbolIcon Symbol="Image" FontSize="9"
@@ -1028,7 +1338,8 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-            </Grid>
+                </Grid>
+            </Panel>
         </Border>
 
         <!-- ============================================================ -->
@@ -1184,7 +1495,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,3">
-                                        <fluent:SymbolIcon Symbol="Folder" FontSize="16" Foreground="#4A9FDE" IconVariant="Filled" />
+                                        <fluent:SymbolIcon Symbol="Folder" FontSize="16" Foreground="{DynamicResource NexusAccent}" IconVariant="Filled" />
                                         <TextBlock Text="{Binding Name}" FontSize="12.5"
                                                    Foreground="{DynamicResource NexusText}"
                                                    VerticalAlignment="Center" />
@@ -1253,7 +1564,7 @@
         <Border IsVisible="{Binding IsFileOperationCenterVisible}"
                 Background="{DynamicResource NexusDialogBackground}" CornerRadius="10" Padding="16"
                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                Margin="24,0,24,40" MinWidth="380" MaxWidth="460"
+                Margin="24,0,24,40" Width="420"
                 BoxShadow="0 8 28 0 #50000000">
             <Grid RowDefinitions="Auto,Auto">
                 <!-- Header -->

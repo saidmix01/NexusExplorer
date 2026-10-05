@@ -14,7 +14,20 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         KeyDown += OnCaptureKeyDown;
+
+        var titleBar = this.FindControl<Border>("TitleBarArea");
+        if (titleBar is not null)
+        {
+            titleBar.PointerPressed += (_, args) =>
+            {
+                if (args.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                    BeginMoveDrag(args);
+            };
+        }
     }
+
+    private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
+        => WindowState = WindowState.Minimized;
 
     protected override void OnOpened(EventArgs e)
     {
@@ -30,6 +43,12 @@ public partial class SettingsWindow : Window
         // window opens), otherwise opening Settings would spuriously re-register/disable.
         if (!_ready || DataContext is not MainWindowViewModel vm) return;
         _ = vm.ApplyGlobalHotkeyEnabledAsync();
+    }
+
+    private void StartWithWindows_Changed(object? sender, RoutedEventArgs e)
+    {
+        if (!_ready || DataContext is not MainWindowViewModel vm) return;
+        _ = vm.ApplyStartWithWindowsAsync();
     }
 
     private void OnCaptureKeyDown(object? sender, KeyEventArgs e)

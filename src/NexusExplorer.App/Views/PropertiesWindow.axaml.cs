@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using NexusExplorer.App.ViewModels;
 
 namespace NexusExplorer.App.Views;
@@ -8,7 +10,23 @@ public partial class PropertiesWindow : Window
     public PropertiesWindow()
     {
         InitializeComponent();
+
+        // Custom title bar drag (SystemDecorations=None uses our own chrome).
+        var titleBar = this.FindControl<Border>("TitleBarArea");
+        if (titleBar is not null)
+        {
+            titleBar.PointerPressed += (_, args) =>
+            {
+                if (args.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                    BeginMoveDrag(args);
+            };
+        }
     }
+
+    private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
+        => WindowState = WindowState.Minimized;
+
+    private void CloseButton_Click(object? sender, RoutedEventArgs e) => Close();
 
     public PropertiesWindow(PropertiesViewModel viewModel) : this()
     {

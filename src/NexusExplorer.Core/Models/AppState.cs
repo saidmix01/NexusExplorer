@@ -62,13 +62,16 @@ public sealed class UserPreferences
     public bool ShowPreviewPanel { get; set; }
     public double IconZoomLevel { get; set; } = 50;
     public List<string> PinnedFavorites { get; set; } = [];
-    public ThemeMode Theme { get; set; } = ThemeMode.Light;
+    public ThemeMode Theme { get; set; } = ThemeMode.RefinedMinimalism;
 
     /// <summary>Whether the "Open Nexus" global hotkey is enabled.</summary>
     public bool GlobalHotkeyEnabled { get; set; } = true;
 
     /// <summary>The "Open Nexus" global shortcut, e.g. "Ctrl+Alt+E".</summary>
     public string GlobalHotkeyShortcut { get; set; } = "Ctrl+Alt+E";
+
+    /// <summary>Whether Nexus Explorer launches automatically when the user signs in to Windows.</summary>
+    public bool StartWithWindows { get; set; }
 }
 
 /// <summary>

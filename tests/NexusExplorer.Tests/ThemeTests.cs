@@ -9,10 +9,10 @@ namespace NexusExplorer.Tests;
 public class ThemeTests
 {
     [Fact]
-    public void ThemeMode_Default_IsLight()
+    public void ThemeMode_Default_IsRefinedMinimalism()
     {
         var prefs = new UserPreferences();
-        Assert.Equal(ThemeMode.Light, prefs.Theme);
+        Assert.Equal(ThemeMode.RefinedMinimalism, prefs.Theme);
     }
 
     [Fact]
@@ -40,18 +40,25 @@ public class ThemeTests
     }
 
     [Fact]
-    public void AppState_DefaultTheme_IsLight()
+    public void AppState_DefaultTheme_IsRefinedMinimalism()
     {
         var state = new AppState();
-        Assert.Equal(ThemeMode.Light, state.Preferences.Theme);
+        Assert.Equal(ThemeMode.RefinedMinimalism, state.Preferences.Theme);
     }
 
     [Fact]
     public void ThemeMode_AllValues_AreDefined()
     {
+        // Legacy values retained for backward-compatible persistence
         Assert.Equal(0, (int)ThemeMode.Light);
         Assert.Equal(1, (int)ThemeMode.Dark);
         Assert.Equal(2, (int)ThemeMode.System);
+
+        // Current spec themes
+        Assert.Equal(10, (int)ThemeMode.RefinedMinimalism);
+        Assert.Equal(11, (int)ThemeMode.ModernPastel);
+        Assert.Equal(12, (int)ThemeMode.AdvancedHierarchy);
+        Assert.Equal(13, (int)ThemeMode.ContextualDark);
     }
 
     [Fact]

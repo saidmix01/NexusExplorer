@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
+        x:Class="NexusExplorer.App.Views.TrayMenuWindow"
+        Width="220" SizeToContent="Height"
+        CanResize="False" ShowInTaskbar="False"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="AcrylicBlur, Mica, Blur"
+        Topmost="True">
+
+    <Window.Styles>
+        <Style Selector="Button.trayItem">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusText}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.trayItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <Style Selector="Button.trayItem fluent|SymbolIcon">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusAccent}" />
+        </Style>
+        <Style Selector="Button.trayDanger fluent|SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource NexusDanger}" />
+        </Style>
+    </Window.Styles>
+
+    <Border CornerRadius="12" BorderBrush="{DynamicResource NexusBorder}" BorderThickness="1"
+            ClipToBounds="True" BoxShadow="0 10 30 -6 #50000000">
+        <Panel>
+            <ExperimentalAcrylicBorder IsHitTestVisible="False">
+                <ExperimentalAcrylicBorder.Material>
+                    <ExperimentalAcrylicMaterial
+                        BackgroundSource="Digger"
+                        TintColor="{DynamicResource NexusAcrylicTint}"
+                        TintOpacity="1"
+                        MaterialOpacity="{DynamicResource NexusAcrylicOpacity}" />
+                </ExperimentalAcrylicBorder.Material>
+            </ExperimentalAcrylicBorder>
+
+            <StackPanel Margin="6" Spacing="2">
+                <Button Classes="trayItem" Name="ShowItem">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <fluent:SymbolIcon Symbol="WindowApps" />
+                        <TextBlock Text="Show Nexus Explorer" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="trayItem" Name="SettingsItem">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <fluent:SymbolIcon Symbol="Settings" />
+                        <TextBlock Text="Settings" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Border Height="1" Margin="8,4" Background="{DynamicResource NexusBorderLight}" />
+                <Button Classes="trayItem trayDanger" Name="ExitItem">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <fluent:SymbolIcon Symbol="SignOut" />
+                        <TextBlock Text="Exit" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Panel>
+    </Border>
+</Window>

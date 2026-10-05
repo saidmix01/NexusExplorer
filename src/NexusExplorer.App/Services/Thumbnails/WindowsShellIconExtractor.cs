@@ -136,6 +136,56 @@ public static class WindowsShellIconExtractor
     #endregion
 
     /// <summary>
+    /// Extracts the shell icon for a file <em>type</em> (by extension, e.g. ".docx") without needing
+    /// a real file, using SHGetFileInfo + USEFILEATTRIBUTES. Used by the dynamic "New" menu to show
+    /// each type's native icon. Returns null on any failure so callers fall back to a generic glyph.
+    /// </summary>
+    public static Task<Bitmap?> ExtractIconForExtensionAsync(string extension, int targetSize, CancellationToken cancellationToken = default)
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || string.IsNullOrWhiteSpace(extension))
+            return Task.FromResult<Bitmap?>(null);
+
+        return Task.Run(() =>
+        {
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var shfi = new SHFILEINFO();
+                const uint SHGFI_USEFILEATTRIBUTES = 0x000000010;
+                const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+
+                var result = SHGetFileInfo(
+                    "placeholder" + extension,
+                    FILE_ATTRIBUTE_NORMAL,
+                    ref shfi,
+                    (uint)Marshal.SizeOf<SHFILEINFO>(),
+                    SHGFI_ICON | SHGFI_LARGEICON | SHGFI_USEFILEATTRIBUTES);
+
+                if (result == IntPtr.Zero || shfi.hIcon == IntPtr.Zero)
+                    return null;
+
+                try
+                {
+                    return HIconToAvaloniaBitmap(shfi.hIcon);
+                }
+                finally
+                {
+                    DestroyIcon(shfi.hIcon);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return null;
+            }
+        }, cancellationToken);
+    }
+
+    /// <summary>
     /// Returns true if we should attempt shell icon extraction for this file.
     /// </summary>
     public static bool ShouldExtractShellIcon(string? extension)
