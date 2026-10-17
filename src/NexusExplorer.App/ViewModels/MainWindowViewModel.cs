@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Runtime.Versioning;
+using NexusExplorer.App.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -482,7 +483,7 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Project Explorer child view model (logical project view for the active folder).</summary>
     public ProjectExplorerViewModel ProjectExplorer { get; }
 
-    public ObservableCollection<FileSystemItem> Items { get; } = [];
+    public BulkObservableCollection<FileSystemItem> Items { get; } = [];
     public ObservableCollection<SidebarGroup> SidebarGroups { get; } = [];
 
     /// <summary>User-created (non-system) sidebar groups, used by the "Add to Sidebar Group" submenu.</summary>
@@ -3350,8 +3351,9 @@ public partial class MainWindowViewModel : ObservableObject
             }
             else
             {
-                foreach (var item in sortedItems)
-                    Items.Add(item);
+                // Batch add: a single Reset notification instead of one CollectionChanged per
+                // item, so the bound view realizes containers in one layout pass.
+                Items.AddRange(sortedItems);
             }
 
             ItemCount = Items.Count;
@@ -4478,10 +4480,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void UpdateSearchUI(List<FileSystemItem> results)
     {
-        Items.Clear();
         var sorted = SortItems(results);
-        foreach (var item in sorted)
-            Items.Add(item);
+        Items.ReplaceAll(sorted);
         ItemCount = Items.Count;
     }
 

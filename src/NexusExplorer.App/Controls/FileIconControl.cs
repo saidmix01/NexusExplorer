@@ -42,6 +42,23 @@ public class FileIconControl : Panel
     // Cached folder drawings at various sizes
     private static readonly Dictionary<int, DrawingImage> FolderDrawingCache = new();
 
+    // DI services resolved once and reused by every instance. The old code called
+    // App.Services.GetService<T>() per item inside UpdateIcon, which does a dictionary lookup
+    // and (for the first resolve) activation on every container realization. In a large
+    // directory UpdateIcon runs for thousands of containers, so hoisting these to statics
+    // removes that per-item service-locator cost.
+    private static IFileIconService? _iconService;
+    private static IThumbnailService? _thumbnailService;
+    private static bool _servicesResolved;
+
+    private static void EnsureServices()
+    {
+        if (_servicesResolved) return;
+        _iconService = App.Services.GetService<IFileIconService>();
+        _thumbnailService = App.Services.GetService<IThumbnailService>();
+        _servicesResolved = true;
+    }
+
     public FileIconControl()
     {
         _symbolIcon = new SymbolIcon
@@ -135,12 +152,14 @@ public class FileIconControl : Panel
         _thumbnailImage.Source = null;
         _folderImage.IsVisible = false;
 
+        EnsureServices();
+
         // Folders get custom colored icon
         if (item.Type == FileSystemItemType.Directory)
         {
-            // Check for custom folder color
-            var folderColorService = App.Services.GetService<IFolderColorService>();
-            var customColor = folderColorService?.GetColor(item.Path);
+            // Use the color already stamped onto the item by the view model (StampFolderColors)
+            // instead of re-querying IFolderColorService for every container.
+            var customColor = item.FolderColor;
 
             if (FlatStyle)
             {
@@ -177,9 +196,8 @@ public class FileIconControl : Panel
             return;
         }
 
-        // Resolve icon using the centralized service
-        var iconService = App.Services.GetService<IFileIconService>();
-        var symbol = (Symbol)(iconService?.GetIcon(item) ?? Symbol.Document);
+        // Resolve icon using the centralized service (cached statically)
+        var symbol = (Symbol)(_iconService?.GetIcon(item) ?? Symbol.Document);
         _symbolIcon.Symbol = symbol;
         _symbolIcon.Foreground = GetIconForeground(symbol);
         _symbolIcon.IsVisible = true;
@@ -188,7 +206,7 @@ public class FileIconControl : Panel
         // For shell-icon files (.lnk, .exe), always try extraction regardless of UseThumbnails
         var shouldTryThumbnail = UseThumbnails || IsShellIconFile(item);
 
-        if (shouldTryThumbnail && App.Services.GetService<IThumbnailService>() is { } thumbnailService)
+        if (shouldTryThumbnail && _thumbnailService is { } thumbnailService)
         {
             if (thumbnailService.CanGenerateThumbnail(item))
             {
