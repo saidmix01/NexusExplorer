@@ -331,6 +331,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsRecycleBinView));
 
+        // Persist navigation (the active tab's path changed) so the restored session matches.
+        ScheduleSessionSave();
+
         // Keep the Project Explorer in sync when navigating while it is the active content.
         if (ContentMode == ExplorerContentMode.Project)
             _ = ProjectExplorer.LoadAsync(value);
@@ -764,7 +767,13 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         RegisterGlobalHotkeyOnStartup();
+
+        // Restore is complete: from now on, persist tab changes as they happen so a PC shutdown
+        // (which kills the process without a window-close) never resurrects stale tabs.
+        _sessionRestored = true;
     }
+
+    private bool _sessionRestored;
 
     /// <summary>
     /// Opens the given folder in a NEW tab (used for external launches: shell "open"/"reveal",
@@ -795,16 +804,27 @@ public partial class MainWindowViewModel : ObservableObject
     /// </summary>
     public async Task SaveSessionAsync(double windowWidth, double windowHeight, double windowX, double windowY, bool isMaximized)
     {
+        var window = new WindowBoundsState
+        {
+            Width = windowWidth,
+            Height = windowHeight,
+            X = windowX,
+            Y = windowY,
+            IsMaximized = isMaximized
+        };
+        _lastWindowBounds = window;
+        await _statePersistence.SaveAsync(BuildAppState(window));
+    }
+
+    /// <summary>
+    /// Builds the full <see cref="AppState"/> snapshot (tabs, preferences, sidebar) for the
+    /// given window bounds.
+    /// </summary>
+    private AppState BuildAppState(WindowBoundsState window)
+    {
         var state = new AppState
         {
-            Window = new WindowBoundsState
-            {
-                Width = windowWidth,
-                Height = windowHeight,
-                X = windowX,
-                Y = windowY,
-                IsMaximized = isMaximized
-            },
+            Window = window,
             ActiveTabIndex = Math.Max(0, _tabService.Tabs.ToList().FindIndex(t => t.IsActive)),
             Preferences = new UserPreferences
             {
@@ -852,7 +872,59 @@ public partial class MainWindowViewModel : ObservableObject
             });
         }
 
-        await _statePersistence.SaveAsync(state);
+        return state;
+    }
+
+    // Last window bounds captured on a window-close save; reused when persisting mid-session
+    // (tab open/close/navigation) so the saved state always reflects the current tabs even if
+    // the process is later killed by a PC shutdown while sitting in the tray.
+    private WindowBoundsState? _lastWindowBounds;
+    private CancellationTokenSource? _sessionSaveCts;
+
+    /// <summary>
+    /// Debounced "save the session now" used whenever tabs change or we navigate, so the
+    /// persisted tab set stays current without waiting for the window to close.
+    /// </summary>
+    private void ScheduleSessionSave()
+    {
+        // Don't start persisting until the initial session restore has populated the tabs,
+        // otherwise an early (empty) save could wipe the user's saved tabs.
+        if (!_sessionRestored) return;
+
+        _sessionSaveCts?.Cancel();
+        _sessionSaveCts?.Dispose();
+        _sessionSaveCts = new CancellationTokenSource();
+        var ct = _sessionSaveCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(600, ct);
+                await SaveSessionStateOnlyAsync();
+            }
+            catch (OperationCanceledException) { /* superseded by a newer change */ }
+            catch (Exception ex) { _logger.LogWarning(ex, "Debounced session save failed."); }
+        }, ct);
+    }
+
+    /// <summary>
+    /// Persists tabs/preferences immediately, reusing the last known window bounds (or the
+    /// persisted ones) so we never need the live window to save tab changes.
+    /// </summary>
+    public async Task SaveSessionStateOnlyAsync()
+    {
+        try
+        {
+            var window = _lastWindowBounds
+                ?? (await _statePersistence.LoadAsync())?.Window
+                ?? new WindowBoundsState { Width = 1100, Height = 720, X = double.NaN, Y = double.NaN };
+            await _statePersistence.SaveAsync(BuildAppState(window));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist session state.");
+        }
     }
 
     /// <summary>
@@ -3135,11 +3207,16 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _ = Terminal.OpenTerminalAsync();
         }
+
+        // Switching the active tab is part of session state too.
+        ScheduleSessionSave();
     }
 
     private void OnTabsChanged(object? sender, EventArgs e)
     {
         SyncTabCollection();
+        // Persist whenever tabs are opened/closed/reordered so the saved set is always current.
+        ScheduleSessionSave();
     }
 
     private void OnTerminalDirectoryChanged(string path)

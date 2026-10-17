@@ -757,6 +757,16 @@ public partial class MainWindow : Window
 
     private void AddressBar_DoubleTapped(object? sender, TappedEventArgs e)
     {
+        // The Back/Forward and breadcrumb-segment buttons live INSIDE the address bar now.
+        // Double-clicking (or rapid-clicking) one of them bubbles a DoubleTapped up to this
+        // Border — don't let that switch the bar into path-edit mode. Only a double-click on
+        // the empty breadcrumb area should start editing.
+        if (e.Source is Control src && src.FindAncestorOfType<Button>(includeSelf: true) is not null)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (DataContext is MainWindowViewModel vm)
         {
             vm.StartAddressBarEditCommand.Execute(null);
