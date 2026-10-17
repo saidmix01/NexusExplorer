@@ -20,7 +20,7 @@ public partial class ProjectExplorerView : UserControl
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
-    private void ProjectEntry_DoubleTapped(object? sender, TappedEventArgs e)
+    private void ProjectEntry_Tapped(object? sender, TappedEventArgs e)
     {
         if (sender is not Control { Tag: ProjectEntry entry })
             return;

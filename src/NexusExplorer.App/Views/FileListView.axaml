@@ -15,9 +15,11 @@
              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
              ScrollViewer.VerticalScrollBarVisibility="Auto">
 
+        <!-- VirtualizingStackPanel (Avalonia native) only realizes the rows inside the viewport,
+             so large directories no longer materialize every item. Single vertical column. -->
         <ListBox.ItemsPanel>
             <ItemsPanelTemplate>
-                <WrapPanel Orientation="Vertical" />
+                <VirtualizingStackPanel Orientation="Vertical" />
             </ItemsPanelTemplate>
         </ListBox.ItemsPanel>
 

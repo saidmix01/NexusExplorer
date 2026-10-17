@@ -569,7 +569,10 @@ public partial class MainWindowViewModel : ObservableObject
                     {
                         StatusText = $"Cannot open file: {ex.Message}";
                     }
-                });
+                },
+                // Reuse the existing terminal-run pipeline so Project Explorer can actually run
+                // scripts/commands instead of only describing them.
+                runCommandAsync: command => RunProjectCommandInTerminalAsync(command));
         _historyService.HistoryChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(CanUndo));

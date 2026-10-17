@@ -5,6 +5,7 @@
              xmlns:fluent="using:FluentIcons.Avalonia.Fluent"
              x:Class="NexusExplorer.App.Views.ProjectExplorerView"
              x:DataType="vm:ProjectExplorerViewModel"
+             x:Name="ProjectRoot"
              Background="{DynamicResource NexusGlassSurface}">
 
     <UserControl.Styles>
@@ -21,9 +22,31 @@
             <Setter Property="Margin" Value="0,1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Border.projEntry:pointerover">
             <Setter Property="Background" Value="{DynamicResource NexusHover}" />
+        </Style>
+        <!-- Information rows are not actionable: no hand cursor, no hover highlight. -->
+        <Style Selector="Border.projEntry.info">
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+        <Style Selector="Border.projEntry.info:pointerover">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <!-- Run button on command rows: appears on row hover, filled on its own hover. -->
+        <Style Selector="Button.projRun">
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="{DynamicResource NexusAccentSubtle}" />
+            <Setter Property="Foreground" Value="{DynamicResource NexusAccent}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.projRun:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource NexusAccent}" />
+            <Setter Property="TextElement.Foreground" Value="White" />
         </Style>
     </UserControl.Styles>
 
@@ -92,22 +115,37 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="projects:ProjectEntry">
                                             <Border Classes="projEntry"
-                                                    DoubleTapped="ProjectEntry_DoubleTapped"
+                                                    Classes.info="{Binding Kind, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter=Information}"
+                                                    Tapped="ProjectEntry_Tapped"
                                                     Tag="{Binding}">
-                                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                                    <fluent:SymbolIcon Symbol="{Binding Kind, Converter={x:Static vm:ProjectEntryIconConverter.Instance}}"
-                                                                       FontSize="15" VerticalAlignment="Center"
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <fluent:SymbolIcon Grid.Column="0"
+                                                                       Symbol="{Binding Kind, Converter={x:Static vm:ProjectEntryIconConverter.Instance}}"
+                                                                       FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0"
                                                                        Foreground="{DynamicResource NexusTextSecondary}" />
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontSize="13" VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource NexusText}" />
-                                                    <!-- Command preview (scripts) -->
-                                                    <TextBlock Text="{Binding Command.DisplayCommand}"
-                                                               FontSize="11" VerticalAlignment="Center"
-                                                               FontFamily="Cascadia Mono,Consolas,monospace"
-                                                               Foreground="{DynamicResource NexusTextTertiary}"
-                                                               IsVisible="{Binding Command, Converter={x:Static vm:IsNotNullConverter.Instance}}" />
-                                                </StackPanel>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontSize="13" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource NexusText}" />
+                                                        <!-- Command preview (scripts) -->
+                                                        <TextBlock Text="{Binding Command.DisplayCommand}"
+                                                                   FontSize="11" VerticalAlignment="Center"
+                                                                   FontFamily="Cascadia Mono,Consolas,monospace"
+                                                                   Foreground="{DynamicResource NexusTextTertiary}"
+                                                                   IsVisible="{Binding Command, Converter={x:Static vm:IsNotNullConverter.Instance}}" />
+                                                    </StackPanel>
+                                                    <!-- Run button: only for command entries; runs in the integrated terminal. -->
+                                                    <Button Grid.Column="2" Classes="projRun"
+                                                            Command="{Binding DataContext.RunCommandCommand, ElementName=ProjectRoot}"
+                                                            CommandParameter="{Binding Command}"
+                                                            IsVisible="{Binding Kind, Converter={x:Static vm:EnumEqualsConverter.Instance}, ConverterParameter=Command}"
+                                                            ToolTip.Tip="Run in terminal">
+                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                            <fluent:SymbolIcon Symbol="Play" FontSize="12" VerticalAlignment="Center" />
+                                                            <TextBlock Text="Run" FontSize="12" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
