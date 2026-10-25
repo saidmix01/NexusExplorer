@@ -20,9 +20,10 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject
     private readonly ILogger<ProjectExplorerViewModel> _logger;
 
     // Supplied by the host so entry activation reuses the existing navigation/open pipeline
-    // instead of duplicating it here. Both are no-ops until wired up.
+    // and the existing terminal-run pipeline instead of duplicating them here.
     private readonly Func<string, Task> _openFolderAsync;
     private readonly Func<string, Task> _openFileAsync;
+    private readonly Func<ProjectCommand, Task> _runCommandAsync;
 
     private CancellationTokenSource? _detectCts;
 
@@ -42,11 +43,13 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject
         IProjectDetectionService detectionService,
         Func<string, Task> openFolderAsync,
         Func<string, Task> openFileAsync,
+        Func<ProjectCommand, Task> runCommandAsync,
         ILogger<ProjectExplorerViewModel>? logger = null)
     {
         _detectionService = detectionService;
         _openFolderAsync = openFolderAsync;
         _openFileAsync = openFileAsync;
+        _runCommandAsync = runCommandAsync;
         _logger = logger ?? NullLogger<ProjectExplorerViewModel>.Instance;
     }
 
@@ -56,6 +59,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject
         _detectionService = null!;
         _openFolderAsync = _ => Task.CompletedTask;
         _openFileAsync = _ => Task.CompletedTask;
+        _runCommandAsync = _ => Task.CompletedTask;
         _logger = NullLogger<ProjectExplorerViewModel>.Instance;
     }
 
@@ -121,26 +125,41 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Opens a logical entry by mapping it back to the real file/folder through the host's
-    /// navigation pipeline. Command and information entries are not opened here (commands are
-    /// reserved for Nexus Actions).
+    /// Activates a logical entry: files/folders are mapped back to the real file system through
+    /// the host's navigation pipeline, and command entries are run in the integrated terminal
+    /// through the host's run pipeline. Information entries are inert.
     /// </summary>
     [RelayCommand]
     private async Task OpenEntryAsync(ProjectEntry? entry)
     {
-        if (entry?.Path is not { Length: > 0 } path)
+        if (entry is null)
             return;
 
         switch (entry.Kind)
         {
-            case ProjectEntryKind.Directory:
-                await _openFolderAsync(path).ConfigureAwait(false);
+            case ProjectEntryKind.Directory when entry.Path is { Length: > 0 } dir:
+                await _openFolderAsync(dir).ConfigureAwait(false);
                 break;
-            case ProjectEntryKind.File:
-                await _openFileAsync(path).ConfigureAwait(false);
+            case ProjectEntryKind.File when entry.Path is { Length: > 0 } file:
+                await _openFileAsync(file).ConfigureAwait(false);
                 break;
-            // Command/Information entries have no file-mapping action here.
+            case ProjectEntryKind.Command:
+                await RunCommandAsync(entry.Command).ConfigureAwait(false);
+                break;
+            // Information entries have no action.
         }
+    }
+
+    /// <summary>
+    /// Runs a project command (script or tooling command) in the integrated terminal via the
+    /// host's run pipeline. Used by the Run button on command rows.
+    /// </summary>
+    [RelayCommand]
+    private async Task RunCommandAsync(ProjectCommand? command)
+    {
+        if (command is null)
+            return;
+        await _runCommandAsync(command).ConfigureAwait(false);
     }
 
     partial void OnProjectChanged(ProjectInfo? value) => OnPropertyChanged(nameof(HasProject));

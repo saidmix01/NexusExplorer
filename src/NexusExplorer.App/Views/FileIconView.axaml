@@ -39,18 +39,19 @@
 
     <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
              SelectionMode="Multiple" Background="Transparent" BorderThickness="0"
+             Padding="10,8"
              DoubleTapped="FileList_DoubleTapped" SelectionChanged="FileList_SelectionChanged"
              Name="FileListBox"
              AutomationProperties.Name="File list - icon view"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
              ScrollViewer.VerticalScrollBarVisibility="Auto">
 
-        <!-- WrapPanel for icon grid layout. For large directories (1000+ items),
-             performance is managed via async thumbnail loading with cancellation
-             and deferred icon rendering in FileIconControl. -->
+        <!-- Custom virtualizing wrap panel: lays tiles left-to-right with wrapping (like the old
+             WrapPanel) but only realizes the containers inside the viewport, so large directories
+             scroll at constant cost. Keeps the ListBox so selection/keyboard stay intact. -->
         <ListBox.ItemsPanel>
             <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal" Margin="10,8" />
+                <controls:VirtualizingWrapPanel />
             </ItemsPanelTemplate>
         </ListBox.ItemsPanel>
 
